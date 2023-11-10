@@ -1,0 +1,5 @@
+/*
+!.gitignore
+!/blenderKritaLink
+/blenderKritaLink/__pycache__
+!blenderKritaLink.desktop
