@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=blenderKritaLink
+X-Python-2-Compatible=false
+X-Krita-Manual=Manual.html
+Name=blenderKritaLink
+Comment=Getting a docker set up
