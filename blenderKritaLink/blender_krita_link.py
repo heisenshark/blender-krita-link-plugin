@@ -1,4 +1,5 @@
 import time
+from .connection import ConnectionManager
 from krita import *
 from PyQt5.QtWidgets import (
     QPushButton,
@@ -27,18 +28,18 @@ class BlenderKritaLink(DockWidget):
     cursor_in_view = False
     cursor_last = time.time_ns()
     canvas_update_last = time.time_ns()
-    
     settings = {}
     listen_to_canvas_change = True
-    
+    connection = None
     def __init__(self):
         super().__init__()
         self.init_settings()
-        self.setupUi()
+        self.connection = ConnectionManager(self.message_callback)
         appNotifier = Krita.instance().notifier()
         appNotifier.setActive(True)
         appNotifier.windowCreated.connect(self.listen)
-                
+        self.setupUi()
+
     def setupUi(self):
         self.setObjectName(DOCKER_TITLE)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
@@ -90,50 +91,26 @@ class BlenderKritaLink(DockWidget):
         self.SendDataButton.setObjectName("SendDataButton")
         self.verticalLayout.addWidget(self.SendDataButton)
         spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        
         self.canvasListenCheckbox = QCheckBox(text="Update on drawing?")
         self.canvasListenCheckbox.setCheckState(self.settings['listenCanvas'])
         self.canvasListenCheckbox.setTristate(False)
         self.canvasListenCheckbox.stateChanged.connect(self.on_listen_change)
-        self.verticalLayout.addWidget(self.canvasListenCheckbox)
 
+        self.verticalLayout.addWidget(self.canvasListenCheckbox)
+        
         self.verticalLayout.addItem(spacerItem)
         self.dockWidgetContents.layout().addWidget(self.verticalFrame)
         self.setWidget(self.dockWidgetContents)
         
         
-        self.ConnectButton.clicked.connect(self.listen)
-        self.DisconnectButton.clicked.connect(self.popup)
+        self.ConnectButton.clicked.connect(self.connection.connect)
+        self.DisconnectButton.clicked.connect(self.connection.disconnect)
         self.RefreshButton.clicked.connect(self.listen)
         self.SendDataButton.clicked.connect(self.onUpdateImage)
-        
-    def setup_ui(self):
-        self.setWindowTitle(DOCKER_TITLE)
-        mainWidget = QWidget(self)
-        self.setWidget(mainWidget)
-        connection_wrapper = QHBoxLayout()
-        connectButton = QPushButton("Connect",mainWidget)
-        connectButton.clicked.connect(self.popup)
-        disconnectButton = QPushButton("Disconnect",mainWidget)
-        disconnectButton.clicked.connect(self.popup)
-        startButton = QPushButton("StartExtension",mainWidget)
-        startButton.clicked.connect(self.listen)
-        
-        connection_wrapper.addWidget(connectButton)
-        connection_wrapper.addWidget(disconnectButton)
-
-        print(self.settings)
-        
-        checkbox = QCheckBox(text="Update on drawing?")
-        checkbox.setCheckState(self.settings['listenCanvas'])
-        checkbox.setTristate(False)
-        checkbox.stateChanged.connect(self.on_listen_change)
-        
-        mainWidget.setLayout(QVBoxLayout())
-        mainWidget.layout().addChildLayout(connection_wrapper)
-        mainWidget.layout().addWidget(startButton)
-        mainWidget.layout().addWidget(checkbox)
-        mainWidget.layout().addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding))
-
+    
+    def message_callback(message):
+        print(message)
     
     def init_settings(self):
         x= Krita.instance().readSetting("","blenderKritaSettings","")
