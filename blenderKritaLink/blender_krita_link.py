@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
 )
-from threading import Timer
+from threading import Timer,Thread
 import json
 
 DOCKER_TITLE = 'Blender Krita Link'
@@ -41,7 +41,7 @@ class BlenderKritaLink(DockWidget):
         self.setupUi()
 
     def setupUi(self):
-        self.setObjectName(DOCKER_TITLE)
+        self.setWindowTitle(DOCKER_TITLE)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -49,6 +49,7 @@ class BlenderKritaLink(DockWidget):
         self.setSizePolicy(sizePolicy)
         self.setAllowedAreas(QtCore.Qt.AllDockWidgetAreas)
         self.dockWidgetContents = QWidget()
+        self.dockWidgetContents.setObjectName(DOCKER_TITLE)
         self.dockWidgetContents.setEnabled(True)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -72,9 +73,9 @@ class BlenderKritaLink(DockWidget):
         self.verticalLayout = QVBoxLayout(self.verticalFrame)
         self.verticalLayout.setSizeConstraint(QLayout.SetMaximumSize)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.label = QLabel("Connection status: innactive",self.verticalFrame)
-        self.label.setObjectName("label")
-        self.verticalLayout.addWidget(self.label)
+        self.connectedLabel = QLabel("Connection status: innactive",self.verticalFrame)
+        self.connectedLabel.setObjectName("connected Label")
+        self.verticalLayout.addWidget(self.connectedLabel)
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.ConnectButton = QPushButton("Connect",self.verticalFrame,)
@@ -103,12 +104,46 @@ class BlenderKritaLink(DockWidget):
         self.dockWidgetContents.layout().addWidget(self.verticalFrame)
         self.setWidget(self.dockWidgetContents)
         
-        
-        self.ConnectButton.clicked.connect(self.connection.connect)
+        self.ConnectButton.clicked.connect(self.connect_blender)
         self.DisconnectButton.clicked.connect(self.connection.disconnect)
         self.RefreshButton.clicked.connect(self.listen)
-        self.SendDataButton.clicked.connect(self.onUpdateImage)
+        self.SendDataButton.clicked.connect(self.send_pixels)
     
+    def connect_blender(self):
+        doc = Krita.instance().activeDocument()
+        doc.refreshProjection() #update canvas on screen
+        pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
+        self.connection.connect(len(pixelBytes), lambda: self.connectedLabel.setText("Connection status: blender connected"),  lambda: self.connectedLabel.setText("Connection status: blender disconnected"))    
+        print("bytes count: ",len(pixelBytes))
+    
+    def refresh_document(self, doc):
+        root_node = doc.rootNode()
+        if root_node and len(root_node.childNodes())>0:
+            test_layer = doc.createNode("DELME", "paintLayer")
+            root_node.addChildNode(test_layer, root_node.childNodes()[0])
+            # QtCore.QTimer.singleShot(200, lambda: test_layer.remove() )
+            test_layer.remove()
+    
+    def send_pixels(self):
+        t = time.time()
+        doc = Krita.instance().activeDocument()
+        print("get doc time: ",time.time() - t)
+        # self.refresh_document(doc)
+        # doc.refreshProjection()
+        print("refresh time: ",time.time() - t)
+        pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
+        # self.connection.send_message(bytes(pixelBytes.data())[:])
+        print("pixelbytes time: ",time.time() - t)
+        def write_mem():
+            self.connection.write_memory(pixelBytes)    
+            print("write memory time: ",time.time() - t)
+        t1 = Thread(target=write_mem)
+        t1.start()
+        
+        
+        self.connection.send_message("refresh")
+        print("send message time: ",time.time() - t)
+        
     def message_callback(message):
         print(message)
     
@@ -155,14 +190,16 @@ class BlenderKritaLink(DockWidget):
             self.cursor_in_view = False
 
     def chuj(self):
-        if self.canvas_update_last +250000000 < time.time_ns():
-            print("Canvas Updated", self.canvas_update_last +250000000, time.time_ns())
+        # if self.canvas_update_last +250000000 < time.time_ns():
+        print("Canvas Updated", self.canvas_update_last +250000000, time.time_ns())
+        self.send_pixels()
 
     def onUpdateImage(self):
         if not self.settings['listenCanvas']:
             return
         self.canvas_update_last = time.time_ns()
         t = Timer(0.25,self.chuj)
+        #t = Timer(0,self.chuj)
         t.start()
         
     def canvasChanged(self, canvas):
