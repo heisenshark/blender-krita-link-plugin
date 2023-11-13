@@ -1,5 +1,9 @@
 /*
 !.gitignore
-!/blenderKritaLink
-/blenderKritaLink/__pycache__
-!blenderKritaLink.desktop
+!/BlenderKritaLink
+!/KritaBlenderLink
+/KritaBlenderLink/__pycache__
+!KritaBlenderLink.desktop
+**/__pycache__
+*/.vscode
+connection/__pycache__
