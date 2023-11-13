@@ -2,7 +2,7 @@ import bpy
 
 def update_gui():
     print("siema")
-    if hasattr(bpy.context,'screen'):
+    if hasattr(bpy.context,'screen') and hasattr(bpy.context.screen,'areas') and bpy.context.screen.areas:
         for area in bpy.context.screen.areas:area.tag_redraw()
     print("elo")
 

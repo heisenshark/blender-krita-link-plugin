@@ -32,8 +32,8 @@ class KritaConnection():
         KritaConnection.STATUS = 'listening'
         
     def update_message(self,message):
-        if hasattr(bpy.context,'scene'):
-            bpy.context.scene.test_prop= "listening"
+        if hasattr(bpy.context,'scene') and hasattr(bpy.context.scene,'test_prop') and bpy.context.scene.test_prop:
+            bpy.context.scene.test_prop = message
         else: print("no scene??")
         
     def krita_listener(self):
@@ -51,19 +51,22 @@ class KritaConnection():
             try:
                 while True:
                     msg = conn.recv()
-                    print("message recived")
+                    self.update_message("image recived")
                     if msg == 'close':
                         print(msg)
                         conn.close()
+                        self.update_message("closed")
                         break
                     elif msg == 'refresh':
                         t = time.time()
                         print("refresh initiated")
+                        self.update_message("got The Image")
                         fp32_array = np.frombuffer(existing_shm.buf, dtype=np.float32)
                         print("refresh initiated")
                         ImageManager.INSTANCE.mirror_image(fp32_array)
                         fp32_array = None
                         print("refresh complete")
+                        self.update_message("connected")
                     # elif isinstance(msg, bytes):
                     #     ImageManager.update_image(msg)
                     #     print("handled_time",time.time())
