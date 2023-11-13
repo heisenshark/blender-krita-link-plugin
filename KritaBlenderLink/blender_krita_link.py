@@ -137,12 +137,12 @@ class BlenderKritaLink(DockWidget):
         def write_mem():
             self.connection.write_memory(pixelBytes)    
             print("write memory time: ",time.time() - t)
+            self.connection.send_message("refresh")
+            print("send message time: ",time.time() - t)
         t1 = Thread(target=write_mem)
         t1.start()
         
         
-        self.connection.send_message("refresh")
-        print("send message time: ",time.time() - t)
         
     def message_callback(message):
         print(message)

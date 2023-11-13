@@ -1,84 +1,76 @@
-from krita import *
-from threading import Timer,Thread
+from multiprocessing.connection import Connection, Listener,Client
+import time
+from random import random
+from threading import Thread,Event
 from multiprocessing import shared_memory
-from multiprocessing.connection import Client
+import struct
+import array
 
-class ConnectionManager():
- adress = 6000
- connection = None
- shm = None
-  
- def __init__(self,message_callback) -> None:
-  self.message_callback = message_callback
-  pass
- 
- def change_adress(self,adr):
-  self.adress = adr
- 
- def connect(self,canvas_bytes_len,on_connect,on_disconnect):
-  if(self.connection):
-   return
-  else: 
-   print(self.connection)
-   
-  try:
-    self.shm = shared_memory.SharedMemory(name="krita-blender", create=True, size=canvas_bytes_len)
-  except:
-    print("file exists, trying another way")
-    self.shm = shared_memory.SharedMemory(name="krita-blender", create=False, size=canvas_bytes_len)
+from click import launch
+import bpy
+import numpy as np
+from .image_manager import ImageManager
+
+class KritaConnection():
+    PORT = 6000
+    LINK_INSTANCE = None
+    STATUS: str
     
-  def thread():
-   with Client(("localhost",self.adress), authkey=b'2137') as connection:
-    print("client created")
-    self.connection = connection
-    on_connect()
-    while True:
-     try:
-      print("recived message")
-      message = self.connection.recv()
-      self.on_message(message)
-     except:
-      print("Error on reciving messages")
-      self.connection = None
-      if self.shm:
-        self.shm.close()
-        self.shm.unlink()
-      on_disconnect()
-      break
-  t1 = Thread(target=thread)
-  t1.start()
-   
- def disconnect(self):
-  if self.connection:
-   self.connection.send('close')
-   self.connection.close()
-   self.connection = None
-   if(self.on_disconnect):
-     self.on_disconnect()
-  if self.shm:
-    self.shm.close()
-    self.shm.unlink()
-  else:
-   print("there is no connection")
- def on_message(self,message):
-  self.message_callback(message)
-  print(message)
- 
-#  def on_disconnect():
-#   print("disconnected from blender")
+    def __init__(self) -> None:
+        if KritaConnection.LINK_INSTANCE: return
+        KritaConnection.LINK_INSTANCE = self
+        self.__THREAD = Thread(target=self.krita_listener)
+        self.__THREAD.start()
+        self.__STOP_SIGNAL = Event()
+        self.CONNECTION: None|Connection = None
+        KritaConnection.STATUS = 'listening'
 
- def send_message(self,message):
-  if self.connection:
-    self.connection.send(message)
-  else:
-    print("there is no connection")
- def listen(message):
-  pass
-
- def write_memory(self,bts):
-  print(self.shm)
-  if self.shm == None:
-    print("no memory to write")
-    return
-  self.shm.buf[:len(bts)] = bts
-   
+    def __del__(self):
+        self.__STOP_SIGNAL.set()
+        if self.CONNECTION:
+            self.CONNECTION.send("close")
+            self.CONNECTION.close()
+            
+    def krita_listener(self):
+        """chuj"""
+        while True:
+            KritaConnection.LINK_INSTANCE = self
+            address = ('localhost', KritaConnection.PORT)     # family is deduced to be 'AF_INET'
+            KritaConnection.STATUS = "listening"
+            listener = Listener(address, authkey=b'2137')
+            conn = listener.accept()
+            KritaConnection.STATUS = "connected"
+            KritaConnection.CONNECTION = conn
+            print("connection accepted")
+            existing_shm = shared_memory.SharedMemory(name='krita-blender')
+            try:
+                while True:
+                    msg = conn.recv()
+                    print("message recived")
+                    if msg == 'close':
+                        print(msg)
+                        conn.close()
+                        existing_shm.close()
+                        break
+                    elif msg == 'refresh':
+                        t = time.time()
+                        print("refresh initiated")
+                        fp32_array = np.frombuffer(existing_shm.buf, dtype=np.float32)
+                        print("refresh initiated")
+                        ImageManager.INSTANCE.mirror_image(fp32_array)
+                        print("refresh complete")
+                    # elif isinstance(msg, bytes):
+                    #     ImageManager.update_image(msg)
+                    #     print("handled_time",time.time())
+                existing_shm.close()
+                conn.close()
+            except:
+                print("error happened")
+                if self.CONNECTION != None:
+                    self.CONNECTION.send("close")
+                    self.CONNECTION.close()
+                self.CONNECTION = None
+                existing_shm.close()
+            listener.close()
+            if self.__STOP_SIGNAL.is_set():
+                break
