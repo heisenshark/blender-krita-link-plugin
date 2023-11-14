@@ -1,7 +1,7 @@
 import time
 import typing
 from krita import *
-from PyQt5.QtCore import QSize
+from PyQt5.QtCore import QSize,pyqtSignal
 from PyQt5.QtWidgets import (
     QPushButton,
     QStatusBar,
@@ -74,15 +74,16 @@ class ImageItem(QWidget):
         print(f"Button clicked: {self.label.text()}")
 
 class ImageList(QScrollArea):
+    refresh_signal = pyqtSignal(object)
     l = []
+        
     def __init__(self, parent: QWidget | None = ...) -> None:
         super().__init__(parent)
         self.image_list = ["Item 1", "Item 2", "Item 3", "Item 3", "Item 3", "Item 3", "Item 3"]
         self.setObjectName(u"ImageList")
-        self.scrollArea = QScrollArea(parent=parent)
-        self.scrollArea.setObjectName("scrollArea")
-        self.scrollArea.setMinimumSize(QSize(0, 100))
-        self.scrollArea.setWidgetResizable(True)
+        self.setObjectName("scrollArea")
+        self.setMinimumSize(QSize(0, 100))
+        self.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
@@ -93,22 +94,24 @@ class ImageList(QScrollArea):
         self.scrollAreaWidgetContents.setMinimumSize(QSize(0, 0))
         self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-                
+        self.setWidget(self.scrollAreaWidgetContents)
+        
+        
         for item_text in self.image_list:
             item = ImageItem(item_text,self.scrollAreaWidgetContents)
             # custom_item = QPushButton(item_text, self.scrollAreaWidgetContents)
             self.verticalLayout_2.addWidget(item)
             # self.verticalLayout.addWidget(custom_item)
         # Usuń wszystkie dzieci z głównego widżetu
-        
+                
+        self.refresh_signal.connect(self.update_images_list)
         
     def update_images_list(self,images_list):
         print("update time")
         for i in reversed(range(self.verticalLayout_2.count())):
             widget_to_remove = self.verticalLayout_2.itemAt(i).widget()
+            widget_to_remove.moveToThread(self.thread());
             if widget_to_remove is not None:
-                widget_to_remove.setParent(None)
                 widget_to_remove.deleteLater()
         print("items removed", len(images_list))
         self.l.clear()
@@ -116,8 +119,11 @@ class ImageList(QScrollArea):
             item = ImageItem(image['name'],self.scrollAreaWidgetContents)
             self.l.append(item)
             print("item created")
+            self.verticalLayout_2.moveToThread(self.thread())
             self.verticalLayout_2.addWidget(item)
             print("item added")
+        
+        
             # custom_item = QPushButton(item_text, self.scrollAreaWidgetContents)
 
 
@@ -198,7 +204,7 @@ class BlenderKritaLink(DockWidget):
         # # self.imagesFrame.setFrameShape(QFrame.NoFrame)
         # self.imagesFrame.setObjectName("imagesFrame")
         # self.imagesFrame.layout = QVBoxLayout()
-        self.list = ImageList(parent=self.dockWidgetContents)
+        self.list = ImageList(parent=self.verticalFrame)
         self.verticalLayout.addWidget(self.list)
         self.getImageDataButton = QPushButton("Refresh Images",self.verticalFrame)
         self.getImageDataButton.setObjectName("getImageDataButton")
@@ -264,7 +270,8 @@ class BlenderKritaLink(DockWidget):
             print(message)
             match message['type']:
                 case "IMAGES_DATA":
-                    self.list.update_images_list(message['data'])
+                    self.list.refresh_signal.emit(message['data'])
+                    # self.list.update_images_list(message['data'])
                 case _: 
                     pass
     
