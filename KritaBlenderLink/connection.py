@@ -38,8 +38,8 @@ class ConnectionManager():
       print("recived message")
       message = self.connection.recv()
       self.on_message(message)
-     except:
-      print("Error on reciving messages")
+     except Exception as e:
+      print("Error on reciving messages", e)
       self.connection = None
       if self.shm:
         self.shm.close()

@@ -9,6 +9,7 @@ import bpy
 import numpy as np
 from .image_manager import ImageManager
 from .ui import BlenderKritaLinkPanel
+import json
 
 class KritaConnection():
     PORT = 6000
@@ -50,8 +51,11 @@ class KritaConnection():
             existing_shm = shared_memory.SharedMemory(name='krita-blender')
             try:
                 while True:
+                    print("listening for message")
+                    self.update_message("connected")
                     msg = conn.recv()
-                    self.update_message("image recived")
+                    self.update_message("message recived")
+                    print(msg)
                     if msg == 'close':
                         print(msg)
                         conn.close()
@@ -67,13 +71,26 @@ class KritaConnection():
                         fp32_array = None
                         print("refresh complete")
                         self.update_message("connected")
-                    # elif isinstance(msg, bytes):
-                    #     ImageManager.update_image(msg)
-                    #     print("handled_time",time.time())
+                    elif isinstance(msg,object):
+                        print("message is object UwU")
+                        if "type" in msg and msg["type"] == "GET_IMAGES":
+                            data = []
+                            for image in bpy.data.images:
+                                data.append({
+                                    "name": image.name,
+                                    "path": bpy.path.abspath(image.filepath),
+                                    "size":[image.size[0],image.size[1]]
+                                })
+                            print(msg)
+                            conn.send({
+                                "type":"IMAGES_DATA",
+                                "data":data,
+                            })
+                
                 existing_shm.close()
                 conn.close()
-            except:
-                print("error happened")
+            except Exception as e:
+                print("error happened", e)
                 if self.CONNECTION != None:
                     self.CONNECTION.send("close")
                     self.CONNECTION.close()

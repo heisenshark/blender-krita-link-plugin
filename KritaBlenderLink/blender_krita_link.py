@@ -1,6 +1,7 @@
 import time
-from .connection import ConnectionManager
+import typing
 from krita import *
+from PyQt5.QtCore import QSize
 from PyQt5.QtWidgets import (
     QPushButton,
     QStatusBar,
@@ -18,16 +19,110 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QSpacerItem,
     QSizePolicy,
+    QListWidget,
+    QListView,
+    QLayout
 )
 from threading import Timer,Thread
 import json
 
+from .connection import ConnectionManager
+
 DOCKER_TITLE = 'Blender Krita Link'
 
+class ImageItem(QWidget):
+    def __init__(self, text, parent=None):
+        super().__init__(parent)
+        self.setObjectName(u"ListItem")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
+        self.setSizePolicy(sizePolicy1)
+        self.horizontalLayout_2 = QHBoxLayout(self)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.label_9 = QLabel(text=text,parent=self)
+        self.label_9.setObjectName(u"label_9")
+
+        self.horizontalLayout_2.addWidget(self.label_9)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
+
+        self.pushButton_3 = QPushButton("Open",self)
+        self.pushButton_3.setObjectName(u"Open")
+        self.pushButton_3.setSizePolicy(QSizePolicy.Policy.Minimum,QSizePolicy.Policy.Preferred)
+        
+        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.pushButton_3.sizePolicy().hasHeightForWidth())
+        self.pushButton_3.setSizePolicy(sizePolicy2)
+        self.horizontalLayout_2.addWidget(self.pushButton_3)
+        self.setLayout(self.horizontalLayout_2)
+
+        # layout = QHBoxLayout(self)
+        # self.title = QLabel("dupa")
+        # self.label = QPushButton(text)
+        # self.label.clicked.connect(self.on_button_click)
+        # layout.addWidget(self.title)
+        # layout.addWidget(self.label)
+        # self.setLayout(layout)
+
+    def on_button_click(self):
+        print(f"Button clicked: {self.label.text()}")
+
+class ImageList(QScrollArea):
+    l = []
+    def __init__(self, parent: QWidget | None = ...) -> None:
+        super().__init__(parent)
+        self.image_list = ["Item 1", "Item 2", "Item 3", "Item 3", "Item 3", "Item 3", "Item 3"]
+        self.setObjectName(u"ImageList")
+        self.scrollArea = QScrollArea(parent=parent)
+        self.scrollArea.setObjectName("scrollArea")
+        self.scrollArea.setMinimumSize(QSize(0, 100))
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth())
+        self.scrollAreaWidgetContents.setSizePolicy(sizePolicy)
+        self.scrollAreaWidgetContents.setMinimumSize(QSize(0, 0))
+        self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+                
+        for item_text in self.image_list:
+            item = ImageItem(item_text,self.scrollAreaWidgetContents)
+            # custom_item = QPushButton(item_text, self.scrollAreaWidgetContents)
+            self.verticalLayout_2.addWidget(item)
+            # self.verticalLayout.addWidget(custom_item)
+        # Usuń wszystkie dzieci z głównego widżetu
+        
+        
+    def update_images_list(self,images_list):
+        print("update time")
+        for i in reversed(range(self.verticalLayout_2.count())):
+            widget_to_remove = self.verticalLayout_2.itemAt(i).widget()
+            if widget_to_remove is not None:
+                widget_to_remove.setParent(None)
+                widget_to_remove.deleteLater()
+        print("items removed", len(images_list))
+        self.l.clear()
+        for image in images_list:
+            item = ImageItem(image['name'],self.scrollAreaWidgetContents)
+            self.l.append(item)
+            print("item created")
+            self.verticalLayout_2.addWidget(item)
+            print("item added")
+            # custom_item = QPushButton(item_text, self.scrollAreaWidgetContents)
+
+
+
 class BlenderKritaLink(DockWidget):
-    cursor_in_view = False
-    cursor_last = time.time_ns()
-    canvas_update_last = time.time_ns()
     settings = {}
     listen_to_canvas_change = True
     connection = None
@@ -91,23 +186,40 @@ class BlenderKritaLink(DockWidget):
         self.SendDataButton = QPushButton("Send data",self.verticalFrame)
         self.SendDataButton.setObjectName("SendDataButton")
         self.verticalLayout.addWidget(self.SendDataButton)
-        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        
         self.canvasListenCheckbox = QCheckBox(text="Update on drawing?")
         self.canvasListenCheckbox.setCheckState(self.settings['listenCanvas'])
         self.canvasListenCheckbox.setTristate(False)
         self.canvasListenCheckbox.stateChanged.connect(self.on_listen_change)
-
         self.verticalLayout.addWidget(self.canvasListenCheckbox)
+
+        # self.imagesFrame = QWidget(self.dockWidgetContents)
+        # self.imagesFrame.setEnabled(True)
+        # self.imagesFrame.setSizePolicy(sizePolicy)
+        # # self.imagesFrame.setFrameShape(QFrame.NoFrame)
+        # self.imagesFrame.setObjectName("imagesFrame")
+        # self.imagesFrame.layout = QVBoxLayout()
+        self.list = ImageList(parent=self.dockWidgetContents)
+        self.verticalLayout.addWidget(self.list)
+        self.getImageDataButton = QPushButton("Refresh Images",self.verticalFrame)
+        self.getImageDataButton.setObjectName("getImageDataButton")
+
+        self.verticalLayout.addWidget(self.getImageDataButton)
+
+        
+        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
         
         self.verticalLayout.addItem(spacerItem)
         self.dockWidgetContents.layout().addWidget(self.verticalFrame)
         self.setWidget(self.dockWidgetContents)
         
+
+        
         self.ConnectButton.clicked.connect(self.connect_blender)
         self.DisconnectButton.clicked.connect(self.connection.disconnect)
         self.RefreshButton.clicked.connect(self.listen)
         self.SendDataButton.clicked.connect(self.send_pixels)
+        self.getImageDataButton.clicked.connect(self.get_image_data)
+    
     
     def connect_blender(self):
         doc = Krita.instance().activeDocument()
@@ -115,6 +227,9 @@ class BlenderKritaLink(DockWidget):
         pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
         self.connection.connect(len(pixelBytes), lambda: self.connectedLabel.setText("Connection status: blender connected"),  lambda: self.connectedLabel.setText("Connection status: blender disconnected"))    
         print("bytes count: ",len(pixelBytes))
+    
+    def get_image_data(self):
+        self.connection.send_message({"type":"GET_IMAGES"})
     
     def refresh_document(self, doc):
         root_node = doc.rootNode()
@@ -144,8 +259,14 @@ class BlenderKritaLink(DockWidget):
         
         
         
-    def message_callback(message):
-        print(message)
+    def message_callback(self,message):
+        if isinstance(message, object) and "type" in message and 'data' in message:
+            print(message)
+            match message['type']:
+                case "IMAGES_DATA":
+                    self.list.update_images_list(message['data'])
+                case _: 
+                    pass
     
     def init_settings(self):
         x= Krita.instance().readSetting("","blenderKritaSettings","")
@@ -182,22 +303,14 @@ class BlenderKritaLink(DockWidget):
 
         
     def checkEnter(self, eventType):
-        if eventType in [10,11]:
-            self.cursor_last=time.time_ns()
-        if eventType == 10:
-            self.cursor_in_view = True
-        if eventType == 11:
-            self.cursor_in_view = False
+        pass
 
     def chuj(self):
-        # if self.canvas_update_last +250000000 < time.time_ns():
-        print("Canvas Updated", self.canvas_update_last +250000000, time.time_ns())
         self.send_pixels()
 
     def onUpdateImage(self):
         if not self.settings['listenCanvas']:
             return
-        self.canvas_update_last = time.time_ns()
         t = Timer(0.25,self.chuj)
         #t = Timer(0,self.chuj)
         t.start()
@@ -208,8 +321,6 @@ class BlenderKritaLink(DockWidget):
     
     def eventFilter(self, obj, event):
         if isinstance(obj,QOpenGLWidget):
-            etype = event.type()
-            self.checkEnter(etype)
             if event.type() == 3 and event.button() == 1 :
                 print(obj, type(obj).__bases__)
                 self.onUpdateImage()
