@@ -40,12 +40,13 @@ class KritaConnection():
     def krita_listener(self):
         """chuj"""
         while not self.__STOP_SIGNAL.isSet():
+            self.update_message("listening")
             KritaConnection.LINK_INSTANCE = self
             address = ('localhost', KritaConnection.PORT)     # family is deduced to be 'AF_INET'
             self.update_message("listening")
             listener = Listener(address, authkey=b'2137')
             conn = listener.accept()
-            self.update_message("connected")
+            # self.update_message("connected")
             KritaConnection.CONNECTION = conn
             print("connection accepted")
             existing_shm = shared_memory.SharedMemory(name='krita-blender')
@@ -86,7 +87,7 @@ class KritaConnection():
                                 "type":"IMAGES_DATA",
                                 "data":data,
                             })
-                
+                conn.send('close')
                 existing_shm.close()
                 conn.close()
             except Exception as e:
