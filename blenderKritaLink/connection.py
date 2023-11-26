@@ -1,7 +1,7 @@
-from multiprocessing.connection import Connection, Listener,Client
+from multiprocessing.connection import Connection, Listener, Client
 import time
 from random import random
-from threading import Thread,Event
+from threading import Thread, Event
 from multiprocessing import shared_memory
 import struct
 import array
@@ -11,38 +11,42 @@ from .image_manager import ImageManager
 from .ui import BlenderKritaLinkPanel
 import json
 
+
 class KritaConnection():
     PORT = 6000
     LINK_INSTANCE = None
     STATUS: str
-    
+
     def __init__(self) -> None:
-        if KritaConnection.LINK_INSTANCE: return
+        if KritaConnection.LINK_INSTANCE:
+            return
         KritaConnection.LINK_INSTANCE = self
 
     def __del__(self):
         if self.CONNECTION:
             self.CONNECTION.send("close")
             self.CONNECTION.close()
-    
+
     def start(self):
         self.__STOP_SIGNAL = Event()
         self.__THREAD = Thread(target=self.krita_listener)
         self.__THREAD.start()
-        self.CONNECTION: None|Connection = None
+        self.CONNECTION: None | Connection = None
         KritaConnection.STATUS = 'listening'
-        
-    def update_message(self,message):
-        if hasattr(bpy.context,'scene') and hasattr(bpy.context.scene,'test_prop') and bpy.context.scene.test_prop:
+
+    def update_message(self, message):
+        if hasattr(bpy.context, 'scene') and hasattr(bpy.context.scene, 'test_prop') and bpy.context.scene.test_prop:
             bpy.context.scene.test_prop = message
-        else: print("no scene??")
-        
+        else:
+            print("no scene??")
+
     def krita_listener(self):
         """chuj"""
         while not self.__STOP_SIGNAL.isSet():
             self.update_message("listening")
             KritaConnection.LINK_INSTANCE = self
-            address = ('localhost', KritaConnection.PORT)     # family is deduced to be 'AF_INET'
+            # family is deduced to be 'AF_INET'
+            address = ('localhost', KritaConnection.PORT)
             self.update_message("listening")
             listener = Listener(address, authkey=b'2137')
             conn = listener.accept()
@@ -66,27 +70,34 @@ class KritaConnection():
                         t = time.time()
                         print("refresh initiated")
                         self.update_message("got The Image")
-                        fp32_array = np.frombuffer(existing_shm.buf, dtype=np.float32)
+                        fp32_array = np.frombuffer(
+                            existing_shm.buf, dtype=np.float32)
                         print("refresh initiated")
                         ImageManager.INSTANCE.mirror_image(fp32_array)
                         fp32_array = None
                         print("refresh complete")
                         self.update_message("connected")
-                    elif isinstance(msg,object):
+                    elif isinstance(msg, object):
                         print("message is object UwU")
-                        if "type" in msg and msg["type"] == "GET_IMAGES":
-                            data = []
-                            for image in bpy.data.images:
-                                data.append({
-                                    "name": image.name,
-                                    "path": bpy.path.abspath(image.filepath),
-                                    "size":[image.size[0],image.size[1]]
-                                })
-                            print(msg)
-                            conn.send({
-                                "type":"IMAGES_DATA",
-                                "data":data,
-                            })
+                        if "type" in msg and 'requestId' in msg:
+                            type = msg["type"]
+                            match type:
+                                case "GET_IMAGES":
+                                    data = []
+                                    for image in bpy.data.images:
+                                        data.append({
+                                            "name": image.name,
+                                            "path": bpy.path.abspath(image.filepath),
+                                            "size": [image.size[0], image.size[1]]
+                                        })
+                                    print(msg)
+                                    conn.send({
+                                        "type": "GET_IMAGES",
+                                        "data": data,
+                                        "requestId": msg['requestId']
+                                    })
+                                    print("message sent")
+
                 conn.send('close')
                 existing_shm.close()
                 conn.close()
@@ -100,5 +111,5 @@ class KritaConnection():
             listener.close()
             if self.__STOP_SIGNAL.is_set():
                 KritaConnection.STATUS = "listening"
-                self.redraw_uis()            
+                self.redraw_uis()
                 return
