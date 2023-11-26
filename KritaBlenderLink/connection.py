@@ -55,10 +55,12 @@ class ConnectionManager():
                 print("client created")
                 self.connection = connection
                 on_connect()
+                # t2 = Thread(target=thread2)
+                # t2.start()
                 while True:
                     try:
-                        print("recived message")
                         message = self.connection.recv()
+                        print("recived message", message)
                         self.emit_message(message)
                     except Exception as e:
                         print("Error on reciving messages", e)
@@ -72,15 +74,15 @@ class ConnectionManager():
         t1.start()
 
     def disconnect(self):
+        if self.shm:
+            self.shm.close()
+            self.shm.unlink()
         if self.connection:
             self.connection.send('close')
             self.connection.close()
             self.connection = None
             if (self.on_disconnect):
                 self.on_disconnect()
-        if self.shm:
-            self.shm.close()
-            self.shm.unlink()
         else:
             print("there is no connection")
 
@@ -92,6 +94,21 @@ class ConnectionManager():
                 if listener.event_type == event_type:
                     listener.recieve_message(message=message)
 
+    def resize_memory(self, canvas_bytes_len):
+        print("unlink")
+        self.shm.unlink()
+        self.shm.close()
+        asyncio.run(self.request({"type": "CLOSE_MEMORY", "data": ""}))
+        try:
+            self.shm = shared_memory.SharedMemory(
+                name="krita-blender", create=True, size=canvas_bytes_len)
+            print("memory  created")
+        except:
+            print("file exists, trying another way")
+            self.shm = shared_memory.SharedMemory(
+                name="krita-blender", create=False, size=canvas_bytes_len)
+        asyncio.run(self.request({"type": "RECREATE_MEMORY", "data": ""}))
+
 #  def on_disconnect():
 #   print("disconnected from blender")
 
@@ -102,7 +119,7 @@ class ConnectionManager():
             print("there is no connection")
 
     def write_memory(self, bts):
-        print(self.shm)
+        print(self.shm, len(bts))
         if self.shm == None:
             print("no memory to write")
             return
@@ -115,7 +132,7 @@ class ConnectionManager():
             requestId = ConnectionManager.requestId
             payload["requestId"] = requestId
             ConnectionManager.requestId += 1
-            
+
             async def chuj():
                 def on_nop(msg):
                     print("future cancelled")

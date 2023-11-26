@@ -1,16 +1,22 @@
+import typing
+import asyncio
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSignal, QSize
 from .ImageItem import ImageItem
+from KritaBlenderLink.connection import ConnectionManager
+# from connection import ConnectionManager
 
 
 class ImageList(QScrollArea):
-    refresh_signal = pyqtSignal(object)
     l = []
+    refresh_signal = pyqtSignal(object)
+    instance = None
 
-    def __init__(self, parent: QWidget | None = ...) -> None:
+    def __init__(self, con_manager: ConnectionManager, parent: QWidget | None = ...) -> None:
+        ImageList.instance = self
+        self.conn_manager = con_manager
         super().__init__(parent)
-        self.image_list = ["Item 1", "Item 2", "Item 3",
-                           "Item 3", "Item 3", "Item 3", "Item 3"]
+        self.image_list = []
         self.setObjectName(u"ImageList")
         self.setObjectName("scrollArea")
         self.setMinimumSize(QSize(0, 100))
@@ -27,14 +33,6 @@ class ImageList(QScrollArea):
         self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.setWidget(self.scrollAreaWidgetContents)
-
-        for item_text in self.image_list:
-            item = ImageItem(item_text,"0x0",self.scrollAreaWidgetContents)
-            # custom_item = QPushButton(item_text, self.scrollAreaWidgetContents)
-            self.verticalLayout_2.addWidget(item)
-            # self.verticalLayout.addWidget(custom_item)
-        # Usuń wszystkie dzieci z głównego widżetu
-
         self.refresh_signal.connect(self.update_images_list)
 
     def update_images_list(self, images_list):
@@ -47,12 +45,26 @@ class ImageList(QScrollArea):
         print("items removed", len(images_list))
         self.l.clear()
         for image in images_list:
-            item = ImageItem(image['name'], str(
-                image['size'][0]) + "x" + str(image['size'][1]), self.scrollAreaWidgetContents)
+            item = ImageItem(image=image, on_open=lambda: asyncio.run(self.conn_manager.request(
+                {"data": "", "type": "OPEN"})), on_override=self.override_image, parent=self.scrollAreaWidgetContents)
+
+            # item = ImageItem(item_text, "0x0", self.scrollAreaWidgetContents,
+            #                  on_open=asyncio.run(con_manager.request({"data": "", "type": "NONE"})))
+
             self.l.append(item)
             print("item created")
             self.verticalLayout_2.moveToThread(self.thread())
             self.verticalLayout_2.addWidget(item)
             print("item added")
 
-            # custom_item = QPushButton(item_text, self.scrollAreaWidgetContents)
+    def override_image(self, image):
+        doc = Krita.instance().activeDocument()
+        size = [doc.width(), doc.height()]
+        print(size, "memsize", self.conn_manager.shm.size, size[0]*size[1]*16)
+        if size[0]*size[1]*16 > self.conn_manager.shm.size:
+            print("resizing")
+            self.conn_manager.resize_memory(size[0]*size[1]*16)
+        asyncio.run(self.conn_manager.request(
+                    {"data": image, "type": "OVERRIDE_IMAGE"}))
+
+        # custom_item = QPushButton(item_text, self.scrollAreaWidgetContents)

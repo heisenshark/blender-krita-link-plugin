@@ -88,8 +88,10 @@ class KritaConnection():
                                         data.append({
                                             "name": image.name,
                                             "path": bpy.path.abspath(image.filepath),
-                                            "size": [image.size[0], image.size[1]]
+                                            "size": [image.size[0], image.size[1]],
+                                            "isActive": ImageManager.INSTANCE.IMAGE == image.name
                                         })
+
                                     print(msg)
                                     conn.send({
                                         "type": "GET_IMAGES",
@@ -97,6 +99,48 @@ class KritaConnection():
                                         "requestId": msg['requestId']
                                     })
                                     print("message sent")
+
+                                case "OPEN":
+                                    print("dupaopen")
+                                    conn.send({
+                                        "type": "OPEN",
+                                        "data": "",
+                                        "requestId": msg['requestId']
+                                    })
+
+                                case "OVERRIDE_IMAGE":
+                                    print("overriding image: ",
+                                          msg['data']['name'])
+                                    ImageManager.INSTANCE.set_image_name(
+                                        msg['data']['name'])
+                                    conn.send({
+                                        "type": "OVERRIDE_IMAGE",
+                                        "data": "",
+                                        "requestId": msg['requestId']
+                                    })
+                                case "RECREATE_MEMORY":
+                                    existing_shm = shared_memory.SharedMemory(
+                                        name='krita-blender')
+                                    conn.send({
+                                        "type": "RECREATE_MEMORY",
+                                        "data": "",
+                                        "requestId": msg['requestId']
+                                    })
+                                    
+                                case "CLOSE_MEMORY":
+                                    existing_shm.close()
+                                    conn.send({
+                                        "type": "CLOSE_MEMORY",
+                                        "data": "",
+                                        "requestId": msg['requestId']
+                                    })
+
+                                case _:
+                                    conn.send({
+                                        "type": "nop",
+                                        "data": None,
+                                        "requestId": msg['requestId']
+                                    })
 
                 conn.send('close')
                 existing_shm.close()
