@@ -44,8 +44,8 @@ class BlenderKritaLink(DockWidget):
         appNotifier = Krita.instance().notifier()
         appNotifier.setActive(True)
         appNotifier.windowCreated.connect(self.listen)
+        self.avc_connected = False
         self.setupUi()
-        asyncio.run(self.connection.request({type: "GET_IMAGES  "}))
 
     def setupUi(self):
         self.setWindowTitle(DOCKER_TITLE)
@@ -113,7 +113,8 @@ class BlenderKritaLink(DockWidget):
         # # self.imagesFrame.setFrameShape(QFrame.NoFrame)
         # self.imagesFrame.setObjectName("imagesFrame")
         # self.imagesFrame.layout = QVBoxLayout()
-        self.list = ImageList(parent=self.verticalFrame)
+        self.list = ImageList(parent=self.verticalFrame,
+                              con_manager=self.connection)
         self.verticalLayout.addWidget(self.list)
         self.getImageDataButton = QPushButton(
             "Refresh Images", self.verticalFrame)
@@ -138,9 +139,27 @@ class BlenderKritaLink(DockWidget):
         doc = Krita.instance().activeDocument()
         doc.refreshProjection()  # update canvas on screen
         pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
-        self.connection.connect(len(pixelBytes), lambda: self.connectedLabel.setText(
-            "Connection status: blender connected"), lambda: self.connectedLabel.setText("Connection status: blender disconnected"))
+        self.connection.connect(len(pixelBytes), self.on_blender_connected, lambda: self.connectedLabel.setText(
+            "Connection status: blender disconnected"))
         print("bytes count: ", len(pixelBytes))
+        win = Krita.instance().activeWindow().qwindow()
+        if not self.avc_connected:
+            # win.activeViewChanged.disconnect(self.active_view_changed)
+            win.activeViewChanged.connect(self.active_view_changed)
+            print("connected shit to shit")
+        self.avc_connected = True
+        # qwin = Krita.instance().activeWindow().qwindow()
+        # qwin.activeViewChanged.connect(lambda: print("view changed"))
+
+    def on_blender_connected(self):
+        self.connectedLabel.setText("Connection status: blender connected")
+
+        def thread2():
+            dupa = asyncio.run(
+                self.connection.request({"type": "GET_IMAGES"}))
+            ImageList.instance.refresh_signal.emit(dupa['data'])
+        t2 = Thread(target=thread2)
+        t2.start()
 
     def get_image_data(self):
         dupa = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
@@ -196,6 +215,7 @@ class BlenderKritaLink(DockWidget):
 
     def listen(self):
         QtWidgets.qApp.installEventFilter(self)
+
         Krita.instance().action('edit_undo').triggered.connect(
             lambda x: self.onUpdateImage())
         Krita.instance().action('edit_redo').triggered.connect(
@@ -213,7 +233,10 @@ class BlenderKritaLink(DockWidget):
 
     def canvasChanged(self, canvas):
         print("something Happened")
-        pass
+
+    def active_view_changed(self):
+        print("active view changed")
+        self.get_image_data()
 
     def eventFilter(self, obj, event):
         if isinstance(obj, QOpenGLWidget):
