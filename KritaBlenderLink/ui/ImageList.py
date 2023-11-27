@@ -61,10 +61,12 @@ class ImageList(QScrollArea):
         doc = Krita.instance().activeDocument()
         size = [doc.width(), doc.height()]
         print(size, "memsize", self.conn_manager.shm.size, size[0]*size[1]*16)
-        if size[0]*size[1]*16 > self.conn_manager.shm.size:
-            print("resizing")
-            self.conn_manager.resize_memory(size[0]*size[1]*16)
+        # if size[0]*size[1]*16 > self.conn_manager.shm.size:
+        print("resizing")
+        self.conn_manager.resize_memory(size[0]*size[1]*16)
         asyncio.run(self.conn_manager.request(
                     {"data": image, "type": "OVERRIDE_IMAGE"}))
+        asyncio.run(self.conn_manager.request(
+                    {"data": "", "type": "GET_IMAGES"}))
 
         # custom_item = QPushButton(item_text, self.scrollAreaWidgetContents)

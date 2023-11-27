@@ -21,6 +21,7 @@ class ImageManager():
         width = image.size[0]
         height = image.size[1]
         print("hello from mirror_image")
+        image_pixels.resize(len(image.pixels))
 
         pixels_reshaped = image_pixels.reshape((height, width, 4))
         mirrored_pixels = np.flipud(pixels_reshaped).flatten()
@@ -38,6 +39,7 @@ class ImageManager():
         if not self.IMAGE or not image:
             return
         fp32_array = np.frombuffer(bytes_array, dtype=np.float32)
+        fp32_array.resize(len(image.pixels))
         image.pixels.foreach_set(fp32_array)
         image.pack()
         for obj in bpy.context.scene.objects:
