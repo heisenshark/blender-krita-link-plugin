@@ -3,7 +3,7 @@ import asyncio
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSignal, QSize
 from .ImageItem import ImageItem
-from KritaBlenderLink.connection import ConnectionManager
+from KritaBlenderLink.connection import ConnectionManager, override_image
 # from connection import ConnectionManager
 
 
@@ -46,7 +46,7 @@ class ImageList(QScrollArea):
         self.l.clear()
         for image in images_list:
             item = ImageItem(image=image, on_open=lambda: asyncio.run(self.conn_manager.request(
-                {"data": "", "type": "OPEN"})), on_override=self.override_image, parent=self.scrollAreaWidgetContents)
+                {"data": "", "type": "OPEN"})), on_override=lambda image: override_image(image, self.conn_manager), parent=self.scrollAreaWidgetContents)
 
             # item = ImageItem(item_text, "0x0", self.scrollAreaWidgetContents,
             #                  on_open=asyncio.run(con_manager.request({"data": "", "type": "NONE"})))
@@ -56,17 +56,5 @@ class ImageList(QScrollArea):
             self.verticalLayout_2.moveToThread(self.thread())
             self.verticalLayout_2.addWidget(item)
             print("item added")
-
-    def override_image(self, image):
-        doc = Krita.instance().activeDocument()
-        size = [doc.width(), doc.height()]
-        print(size, "memsize", self.conn_manager.shm.size, size[0]*size[1]*16)
-        # if size[0]*size[1]*16 > self.conn_manager.shm.size:
-        print("resizing")
-        self.conn_manager.resize_memory(size[0]*size[1]*16)
-        asyncio.run(self.conn_manager.request(
-                    {"data": image, "type": "OVERRIDE_IMAGE"}))
-        asyncio.run(self.conn_manager.request(
-                    {"data": "", "type": "GET_IMAGES"}))
 
         # custom_item = QPushButton(item_text, self.scrollAreaWidgetContents)

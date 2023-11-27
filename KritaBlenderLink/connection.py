@@ -28,6 +28,7 @@ class ConnectionManager():
     shm = None
     listeners: list[MessageListener] = []
     requestId = 0
+    linked_document = None
 
     def __init__(self) -> None:
         MessageListener("GET_IMAGES", lambda x: print("dupa dupa chuj"))
@@ -156,3 +157,17 @@ class ConnectionManager():
             print("future done")
             return res
         return None
+
+
+def override_image(image, conn_manager):
+    doc = Krita.instance().activeDocument()
+    size = [doc.width(), doc.height()]
+    ConnectionManager.linked_document = doc
+    print(size, "memsize", conn_manager.shm.size, size[0]*size[1]*16)
+    # if size[0]*size[1]*16 > conn_manager.shm.size:
+    print("resizing")
+    conn_manager.resize_memory(size[0]*size[1]*16)
+    asyncio.run(conn_manager.request(
+                {"data": image, "type": "OVERRIDE_IMAGE"}))
+    asyncio.run(conn_manager.request(
+                {"data": "", "type": "GET_IMAGES"}))
