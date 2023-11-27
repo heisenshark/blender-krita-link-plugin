@@ -179,6 +179,8 @@ class BlenderKritaLink(DockWidget):
     def send_pixels(self):
         t = time.time()
         doc = Krita.instance().activeDocument()
+        if (doc != self.connection.linked_document):
+            return
         print("get doc time: ", time.time() - t)
         # self.refresh_document(doc)
         # doc.refreshProjection()
@@ -229,6 +231,7 @@ class BlenderKritaLink(DockWidget):
     def onUpdateImage(self):
         if not self.settings['listenCanvas']:
             return
+        # t = Timer(0.25, self.on_data_send)
         t = Timer(0.25, self.on_data_send)
         # t = Timer(0,self.chuj)
         t.start()
