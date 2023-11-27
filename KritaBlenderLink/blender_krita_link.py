@@ -46,6 +46,8 @@ class BlenderKritaLink(DockWidget):
         appNotifier.windowCreated.connect(self.listen)
         self.avc_connected = False
         self.setupUi()
+        MessageListener(
+            "GET_IMAGES", lambda message: ImageList.instance.refresh_signal.emit(message['data']))
 
     def setupUi(self):
         self.setWindowTitle(DOCKER_TITLE)
@@ -157,7 +159,7 @@ class BlenderKritaLink(DockWidget):
         def thread2():
             dupa = asyncio.run(
                 self.connection.request({"type": "GET_IMAGES"}))
-            ImageList.instance.refresh_signal.emit(dupa['data'])
+            # ImageList.instance.refresh_signal.emit(dupa['data'])
         t2 = Thread(target=thread2)
         t2.start()
 
