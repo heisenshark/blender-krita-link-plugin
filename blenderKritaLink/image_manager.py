@@ -14,8 +14,8 @@ class ImageManager():
     def mirror_image(self, image_pixels):
         print("hello from mirror_image")
         image = self.get_image()
-        if not self.IMAGE or image.type != 'IMAGE':
-            print("object is not image.")
+        if not self.IMAGE or 'IMAGE UV_TEST'.find(image.type) == -1:
+            print("object is not image. ", self.IMAGE, "  type:", image.type)
             return
         print("hello from mirror_image")
         width = image.size[0]
