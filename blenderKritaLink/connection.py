@@ -3,13 +3,10 @@ import time
 from random import random
 from threading import Thread, Event
 from multiprocessing import shared_memory
-import struct
-import array
 import bpy
 import numpy as np
 from .image_manager import ImageManager
 from .ui import BlenderKritaLinkPanel
-import json
 
 
 class KritaConnection():
