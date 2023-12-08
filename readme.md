@@ -1,5 +1,6 @@
 # Blender Krita Link
 
+This is a plugin for quick editting images in krita to use them as textures in blender, you can select krita document and set it to autoupdate one image in blender.
 This plugin is highly experimental and you need to know how to use it
 
 ## Installation
