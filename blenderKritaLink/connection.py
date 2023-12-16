@@ -63,22 +63,40 @@ class KritaConnection():
                         conn.close()
                         self.update_message("closed")
                         break
-                    elif msg == 'refresh':
-                        t = time.time()
-                        print("refresh initiated")
-                        self.update_message("got The Image")
-                        fp32_array = np.frombuffer(
-                            existing_shm.buf, dtype=np.float32)
-                        print("refresh initiated")
-                        ImageManager.INSTANCE.mirror_image(fp32_array)
-                        fp32_array = None
-                        print("refresh complete")
-                        self.update_message("connected")
                     elif isinstance(msg, object):
                         print("message is object UwU")
                         if "type" in msg and 'requestId' in msg:
                             type = msg["type"]
                             match type:
+                                case "REFRESH":
+                                    print("refresh initiated")
+                                    self.update_message("got The Image")
+                                    pixels_array = None
+                                    match msg["depth"]:
+                                        case "F32":
+                                            pixels_array = np.frombuffer(
+                                                existing_shm.buf, dtype=np.float32)
+                                        case "F16":
+                                            pixels_array = np.frombuffer(
+                                                existing_shm.buf, dtype=np.float16)
+                                        case "U8":
+                                            pixels_array = np.frombuffer(
+                                                existing_shm.buf, dtype=np.uint8)
+                                        case "U16":
+                                            pixels_array = np.frombuffer(
+                                                existing_shm.buf, dtype=np.uint16)
+                                    
+                                    print("refresh initiated")
+                                    ImageManager.INSTANCE.mirror_image(pixels_array)
+                                    pixels_array = None
+                                    print("refresh complete")
+                                    self.update_message("connected")
+                                    conn.send({
+                                        "type": "REFRESH",
+                                        "depth": msg["depth"],
+                                        "requestId": msg['requestId']
+                                    })
+
                                 case "GET_IMAGES":
                                     data = []
                                     for image in bpy.data.images:
