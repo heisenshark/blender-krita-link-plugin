@@ -161,12 +161,13 @@ class ConnectionManager():
 
 def override_image(image, conn_manager):
     doc = Krita.instance().activeDocument()
+    depth = int(doc.colorDepth()[1:])//2
     size = [doc.width(), doc.height()]
     ConnectionManager.linked_document = doc
-    print(size, "memsize", conn_manager.shm.size, size[0]*size[1]*16)
-    # if size[0]*size[1]*16 > conn_manager.shm.size:
+    print(size, "memsize", conn_manager.shm.size, size[0]*size[1]*depth, depth ,doc.colorDepth()[1:])
+    # if size[0]*size[1]*depth > conn_manager.shm.size:
     print("resizing")
-    conn_manager.resize_memory(size[0]*size[1]*16)
+    conn_manager.resize_memory(size[0]*size[1]*depth)
     asyncio.run(conn_manager.request(
                 {"data": image, "type": "OVERRIDE_IMAGE"}))
     asyncio.run(conn_manager.request(

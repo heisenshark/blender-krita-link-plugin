@@ -192,7 +192,12 @@ class BlenderKritaLink(DockWidget):
         def write_mem():
             self.connection.write_memory(pixelBytes)
             print("write memory time: ", time.time() - t)
-            self.connection.send_message("refresh")
+            depth = Krita.instance().activeDocument().colorDepth();
+            self.connection.send_message({
+                "type": "REFRESH",
+                "depth": depth,
+                "requestId": 2137
+            })
             print("send message time: ", time.time() - t)
         t1 = Thread(target=write_mem)
         t1.start()
@@ -224,6 +229,10 @@ class BlenderKritaLink(DockWidget):
             lambda x: self.onUpdateImage())
         Krita.instance().action('edit_redo').triggered.connect(
             lambda x: self.onUpdateImage())
+        Krita.instance().action('image_properties').triggered.connect(
+            lambda x: print("properties clicked/changed"))
+        Krita.instance().action('KritaShape/KisToolBrush').triggered.connect(
+            lambda x: print("omg - brush did brushing"))
 
     def on_data_send(self):
         self.send_pixels()
