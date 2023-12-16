@@ -33,6 +33,10 @@ class ImageManager():
         for obj in bpy.context.scene.objects:
             obj.update_tag()
         print("hello from mirror_image")
+        if image.is_float:
+            image.pack()
+            image.alpha_mode = "PREMUL"
+            image.alpha_mode = "STRAIGHT"
 
     def update_image(self, bytes_array):
         image = self.get_image()
