@@ -1,53 +1,39 @@
-import time
-import typing
-from krita import *
-from PyQt5.QtCore import QSize, pyqtSignal
+from krita import Krita, DockWidget, QtWidgets, QOpenGLWidget, QtCore
 from PyQt5.QtWidgets import (
     QPushButton,
-    QStatusBar,
     QLabel,
-    QLineEdit,
     QHBoxLayout,
     QVBoxLayout,
-    QGroupBox,
     QWidget,
-    QSpinBox,
     QFrame,
-    QScrollArea,
-    QMessageBox,
-    QMainWindow,
     QCheckBox,
     QSpacerItem,
     QSizePolicy,
-    QListWidget,
-    QListView,
-    QLayout
+    QLayout,
 )
 from threading import Timer, Thread
-import json
-from .connection import ConnectionManager, MessageListener
-from .ui.ImageList import ImageList
 import asyncio
+from .connection import ConnectionManager
+from .ui.ImageList import ImageList
+from .settings import Settings
 
-DOCKER_TITLE = 'Blender Krita Link'
+DOCKER_TITLE = "Blender Krita Link"
 
 
 class BlenderKritaLink(DockWidget):
-    settings = {}
     listen_to_canvas_change = True
     connection = None
+    advancedRefresh = 0  # 0 1 2 0-off 1-on 2-full
 
     def __init__(self):
         super().__init__()
-        self.init_settings()
+        print(Settings.getSetting("listenCanvas"))
         self.connection = ConnectionManager()
         appNotifier = Krita.instance().notifier()
         appNotifier.setActive(True)
         appNotifier.windowCreated.connect(self.listen)
         self.avc_connected = False
         self.setupUi()
-        MessageListener(
-            "GET_IMAGES", lambda message: ImageList.instance.refresh_signal.emit(message['data']))
 
     def setupUi(self):
         self.setWindowTitle(DOCKER_TITLE)
@@ -64,7 +50,8 @@ class BlenderKritaLink(DockWidget):
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(
-            self.dockWidgetContents.sizePolicy().hasHeightForWidth())
+            self.dockWidgetContents.sizePolicy().hasHeightForWidth()
+        )
         self.dockWidgetContents.setSizePolicy(sizePolicy)
         self.dockWidgetContents.setObjectName("dockWidgetContents")
 
@@ -77,55 +64,45 @@ class BlenderKritaLink(DockWidget):
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(
-            self.verticalFrame.sizePolicy().hasHeightForWidth())
+            self.verticalFrame.sizePolicy().hasHeightForWidth()
+        )
         self.verticalFrame.setSizePolicy(sizePolicy)
         self.verticalFrame.setFrameShape(QFrame.NoFrame)
         self.verticalFrame.setObjectName("verticalFrame")
         self.verticalLayout = QVBoxLayout(self.verticalFrame)
         self.verticalLayout.setSizeConstraint(QLayout.SetMaximumSize)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.connectedLabel = QLabel(
-            "Connection status: innactive", self.verticalFrame)
+        self.connectedLabel = QLabel("Connection status: innactive", self.verticalFrame)
         self.connectedLabel.setObjectName("connected Label")
         self.verticalLayout.addWidget(self.connectedLabel)
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.ConnectButton = QPushButton("Connect", self.verticalFrame,)
+        self.ConnectButton = QPushButton(
+            "Connect",
+            self.verticalFrame,
+        )
         self.ConnectButton.setObjectName("ConnectButton")
         self.horizontalLayout_2.addWidget(self.ConnectButton)
         self.DisconnectButton = QPushButton("Disconnect", self.verticalFrame)
         self.DisconnectButton.setObjectName("DisconnectButton")
         self.horizontalLayout_2.addWidget(self.DisconnectButton)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
-        self.RefreshButton = QPushButton("Refresh", self.verticalFrame)
-        self.RefreshButton.setObjectName("RefreshButton")
-        self.verticalLayout.addWidget(self.RefreshButton)
         self.SendDataButton = QPushButton("Send data", self.verticalFrame)
         self.SendDataButton.setObjectName("SendDataButton")
         self.verticalLayout.addWidget(self.SendDataButton)
         self.canvasListenCheckbox = QCheckBox(text="Update on drawing?")
-        self.canvasListenCheckbox.setCheckState(self.settings['listenCanvas'])
+        self.canvasListenCheckbox.setCheckState(Settings.getSetting("listenCanvas"))
         self.canvasListenCheckbox.setTristate(False)
         self.canvasListenCheckbox.stateChanged.connect(self.on_listen_change)
         self.verticalLayout.addWidget(self.canvasListenCheckbox)
-
-        # self.imagesFrame = QWidget(self.dockWidgetContents)
-        # self.imagesFrame.setEnabled(True)
-        # self.imagesFrame.setSizePolicy(sizePolicy)
-        # # self.imagesFrame.setFrameShape(QFrame.NoFrame)
-        # self.imagesFrame.setObjectName("imagesFrame")
-        # self.imagesFrame.layout = QVBoxLayout()
-        self.list = ImageList(parent=self.verticalFrame,
-                              con_manager=self.connection)
-        self.verticalLayout.addWidget(self.list)
-        self.getImageDataButton = QPushButton(
-            "Refresh Images", self.verticalFrame)
+        ImageList(parent=self.verticalFrame, con_manager=self.connection)
+        self.verticalLayout.addWidget(ImageList.instance)
+        self.getImageDataButton = QPushButton("Refresh Images", self.verticalFrame)
         self.getImageDataButton.setObjectName("getImageDataButton")
 
         self.verticalLayout.addWidget(self.getImageDataButton)
 
-        spacerItem = QSpacerItem(
-            20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout.addItem(spacerItem)
         self.dockWidgetContents.layout().addWidget(self.verticalFrame)
@@ -133,117 +110,89 @@ class BlenderKritaLink(DockWidget):
 
         self.ConnectButton.clicked.connect(self.connect_blender)
         self.DisconnectButton.clicked.connect(self.connection.disconnect)
-        self.RefreshButton.clicked.connect(self.listen)
         self.SendDataButton.clicked.connect(self.send_pixels)
         self.getImageDataButton.clicked.connect(self.get_image_data)
 
     def connect_blender(self):
         doc = Krita.instance().activeDocument()
-        doc.refreshProjection()  # update canvas on screen
         pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
-        self.connection.connect(len(pixelBytes), self.on_blender_connected, lambda: self.connectedLabel.setText(
-            "Connection status: blender disconnected"))
+        self.connection.connect(
+            len(pixelBytes),
+            self.on_blender_connected,
+            lambda: self.connectedLabel.setText(
+                "Connection status: blender disconnected"
+            ),
+        )
         print("bytes count: ", len(pixelBytes))
         win = Krita.instance().activeWindow().qwindow()
         if not self.avc_connected:
-            # win.activeViewChanged.disconnect(self.active_view_changed)
             win.activeViewChanged.connect(self.active_view_changed)
-            print("connected shit to shit")
+            print("connected krita to blender")
         self.avc_connected = True
-        # qwin = Krita.instance().activeWindow().qwindow()
-        # qwin.activeViewChanged.connect(lambda: print("view changed"))
 
     def on_blender_connected(self):
         self.connectedLabel.setText("Connection status: blender connected")
-
-        def thread2():
-            dupa = asyncio.run(
-                self.connection.request({"type": "GET_IMAGES"}))
-            # ImageList.instance.refresh_signal.emit(dupa['data'])
-        t2 = Thread(target=thread2)
-        t2.start()
+        Thread(target=self.get_image_data).start()
 
     def get_image_data(self):
-        dupa = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
-        self.list.refresh_signal.emit(dupa['data'])
-        # self.connection.send_message({"type": "GET_IMAGES"})
+        images = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
+        ImageList.instance.refresh_signal.emit(images["data"])
 
-    def refresh_document(self, doc):
+    def refresh_document(doc):
         root_node = doc.rootNode()
         if root_node and len(root_node.childNodes()) > 0:
             test_layer = doc.createNode("DELME", "paintLayer")
             root_node.addChildNode(test_layer, root_node.childNodes()[0])
-            # QtCore.QTimer.singleShot(200, lambda: test_layer.remove() )
             test_layer.remove()
 
     def send_pixels(self):
-        t = time.time()
         doc = Krita.instance().activeDocument()
-        if (doc != self.connection.linked_document):
+        if doc != self.connection.linked_document:
             return
-        print("get doc time: ", time.time() - t)
-        # self.refresh_document(doc)
-        # doc.refreshProjection()
-        print("refresh time: ", time.time() - t)
+        if self.advancedRefresh == 1:
+            self.refresh_document(doc)
+        elif self.advancedRefresh == 2:
+            doc.refreshProjection()
         pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
-        # self.connection.send_message(bytes(pixelBytes.data())[:])
-        print("pixelbytes time: ", time.time() - t)
 
         def write_mem():
             self.connection.write_memory(pixelBytes)
-            print("write memory time: ", time.time() - t)
-            depth = Krita.instance().activeDocument().colorDepth();
-            self.connection.send_message({
-                "type": "REFRESH",
-                "depth": depth,
-                "requestId": 2137
-            })
-            print("send message time: ", time.time() - t)
-        t1 = Thread(target=write_mem)
-        t1.start()
+            depth = Krita.instance().activeDocument().colorDepth()
+            self.connection.send_message(
+                {"type": "REFRESH", "depth": depth, "requestId": 2137}
+            )
 
-    def init_settings(self):
-        x = Krita.instance().readSetting("", "blenderKritaSettings", "")
-        print(x)
-        if not x:
-            self.settings = {"listenCanvas": True}
-            Krita.instance().writeSetting("", "blenderKritaSettings", json.dumps(self.settings))
-        else:
-            self.settings = json.loads(x)
-
-    def save_settings(self):
-        print(self.settings)
-        if not self.settings:
-            self.settings = {"listenCanvas": True}
-        Krita.instance().writeSetting("", "blenderKritaSettings", json.dumps(self.settings))
+        Thread(target=write_mem).start()
 
     def on_listen_change(self, checked):
         print(checked)
-        self.settings['listenCanvas'] = checked == 2
-        self.save_settings()
-
-    def listen(self):
-        QtWidgets.qApp.installEventFilter(self)
-
-        Krita.instance().action('edit_undo').triggered.connect(
-            lambda x: self.onUpdateImage())
-        Krita.instance().action('edit_redo').triggered.connect(
-            lambda x: self.onUpdateImage())
-        Krita.instance().action('image_properties').triggered.connect(
-            lambda x: print("properties clicked/changed"))
-        Krita.instance().action('KritaShape/KisToolBrush').triggered.connect(
-            lambda x: print("omg - brush did brushing"))
+        Settings.setSetting("listenCanvas", checked == 2)
 
     def on_data_send(self):
         self.send_pixels()
 
     def onUpdateImage(self):
-        if not self.settings['listenCanvas']:
+        if not Settings.getSetting("listenCanvas"):
             return
-        # t = Timer(0.25, self.on_data_send)
+
         t = Timer(0.25, self.on_data_send)
-        # t = Timer(0,self.chuj)
         t.start()
+
+    def listen(self):
+        QtWidgets.qApp.installEventFilter(self)
+
+        Krita.instance().action("edit_undo").triggered.connect(
+            lambda x: self.onUpdateImage()
+        )
+        Krita.instance().action("edit_redo").triggered.connect(
+            lambda x: self.onUpdateImage()
+        )
+        Krita.instance().action("image_properties").triggered.connect(
+            lambda x: print("properties clicked/changed")
+        )
+        Krita.instance().action("KritaShape/KisToolBrush").triggered.connect(
+            lambda x: print("omg - brush did brushing")
+        )
 
     def canvasChanged(self, canvas):
         print("something Happened")

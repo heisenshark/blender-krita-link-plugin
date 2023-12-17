@@ -1,4 +1,4 @@
-from krita import DockWidgetFactory, DockWidgetFactoryBase
+from krita import DockWidgetFactory, DockWidgetFactoryBase, Krita
 from .blender_krita_link import BlenderKritaLink
 import asyncio
 

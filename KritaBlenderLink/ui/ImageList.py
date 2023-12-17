@@ -3,7 +3,7 @@ import asyncio
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSignal, QSize
 from .ImageItem import ImageItem
-from KritaBlenderLink.connection import ConnectionManager, override_image
+from KritaBlenderLink.connection import ConnectionManager, MessageListener, override_image
 # from connection import ConnectionManager
 
 
@@ -34,6 +34,9 @@ class ImageList(QScrollArea):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.setWidget(self.scrollAreaWidgetContents)
         self.refresh_signal.connect(self.update_images_list)
+        MessageListener(
+            "GET_IMAGES", lambda message: ImageList.instance.refresh_signal.emit(message['data']))
+
 
     def update_images_list(self, images_list):
         print("update time")
