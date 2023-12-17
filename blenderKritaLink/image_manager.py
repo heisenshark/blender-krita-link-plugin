@@ -8,13 +8,13 @@ class ImageManager:
     def __init__(self) -> None:
         if ImageManager.INSTANCE:
             return
-        self.IMAGE: str = "Untitled"
+        self.IMAGE = None
         ImageManager.INSTANCE = self
 
     def mirror_image(self, image_pixels):
         print("hello from mirror_image")
         image = self.get_image()
-        if not self.IMAGE or "IMAGE UV_TEST".find(image.type) == -1:
+        if not image or "IMAGE UV_TEST".find(image.type) == -1:
             print("object is not image. ", self.IMAGE, "  type:", image.type)
             return
         print("hello from mirror_image")
@@ -50,7 +50,7 @@ class ImageManager:
 
     def update_image(self, bytes_array):
         image = self.get_image()
-        if not self.IMAGE or not image:
+        if not image:
             return
         fp32_array = np.frombuffer(bytes_array, dtype=np.float32)
         fp32_array.resize(len(image.pixels))
@@ -60,14 +60,16 @@ class ImageManager:
             obj.update_tag()
 
     def get_image(self):
+        if not self.IMAGE:
+            return None
         return bpy.data.images[self.IMAGE]
 
-    def set_image_name(self, name):
+    def set_image_name(self, name: str|None):
         self.IMAGE = name
 
     def get_image_size(self):
         image = self.get_image()
-        if self.IMAGE:
+        if image:
             return image.size
         else:
             return None
