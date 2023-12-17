@@ -22,16 +22,24 @@ class MessageListener:
             self.destroy()
 
 
-class ConnectionManager():
+class ConnectionManager:
     adress = 6000
     connection = None
     shm = None
     listeners: list[MessageListener] = []
     requestId = 0
     linked_document = None
+    linked_image = None
+    images = []
 
     def __init__(self) -> None:
-        MessageListener("GET_IMAGES", lambda x: print("dupa dupa chuj"))
+        MessageListener("GET_IMAGES", lambda message: self.set_images(message["data"]))
+
+    def set_images(self, images):
+        self.images = images
+
+    def get_active_image(self):
+        return next(filter(lambda x: x["isActive"], self.images), None)
 
     def change_adress(self, adr):
         self.adress = adr
@@ -39,20 +47,22 @@ class ConnectionManager():
     def connect(self, canvas_bytes_len, on_connect, on_disconnect):
         self.on_connect = on_connect
         self.on_disconnect = on_disconnect
-        if (self.connection):
+        if self.connection:
             return
         else:
             print(self.connection)
         try:
             self.shm = shared_memory.SharedMemory(
-                name="krita-blender", create=True, size=canvas_bytes_len)
+                name="krita-blender", create=True, size=canvas_bytes_len
+            )
         except:
             print("file exists, trying another way")
             self.shm = shared_memory.SharedMemory(
-                name="krita-blender", create=False, size=canvas_bytes_len)
+                name="krita-blender", create=False, size=canvas_bytes_len
+            )
 
         def thread():
-            with Client(("localhost", self.adress), authkey=b'2137') as connection:
+            with Client(("localhost", self.adress), authkey=b"2137") as connection:
                 print("client created")
                 self.connection = connection
                 on_connect()
@@ -71,6 +81,7 @@ class ConnectionManager():
                             self.shm.unlink()
                         on_disconnect()
                         break
+
         t1 = Thread(target=thread)
         t1.start()
 
@@ -79,18 +90,18 @@ class ConnectionManager():
             self.shm.close()
             self.shm.unlink()
         if self.connection:
-            self.connection.send('close')
+            self.connection.send("close")
             self.connection.close()
             self.connection = None
-            if (self.on_disconnect):
+            if self.on_disconnect:
                 self.on_disconnect()
         else:
             print("there is no connection")
 
     def emit_message(self, message):
-        if isinstance(message, object) and "type" in message and 'data' in message:
+        if isinstance(message, object) and "type" in message and "data" in message:
             print(ConnectionManager.listeners, print(message))
-            event_type = message['type']
+            event_type = message["type"]
             for listener in ConnectionManager.listeners:
                 if listener.event_type == event_type:
                     listener.recieve_message(message=message)
@@ -102,16 +113,18 @@ class ConnectionManager():
         asyncio.run(self.request({"type": "CLOSE_MEMORY", "data": ""}))
         try:
             self.shm = shared_memory.SharedMemory(
-                name="krita-blender", create=True, size=canvas_bytes_len)
+                name="krita-blender", create=True, size=canvas_bytes_len
+            )
             print("memory  created")
         except:
             print("file exists, trying another way")
             self.shm = shared_memory.SharedMemory(
-                name="krita-blender", create=False, size=canvas_bytes_len)
+                name="krita-blender", create=False, size=canvas_bytes_len
+            )
         asyncio.run(self.request({"type": "RECREATE_MEMORY", "data": ""}))
 
-#  def on_disconnect():
-#   print("disconnected from blender")
+    #  def on_disconnect():
+    #   print("disconnected from blender")
 
     def send_message(self, message):
         if self.connection:
@@ -124,7 +137,14 @@ class ConnectionManager():
         if self.shm == None:
             print("no memory to write")
             return
-        self.shm.buf[:len(bts)] = bts
+        self.shm.buf[: len(bts)] = bts
+
+    def remove_link(self):
+        self.linked_document = None
+        asyncio.run(self.request({"data": "", "type": "REMOVE_LINK"}))
+        asyncio.run(self.request({"data": "", "type": "GET_IMAGES"}))
+        
+
 
     async def request(self, payload):
         if self.connection:
@@ -137,18 +157,18 @@ class ConnectionManager():
             async def chuj():
                 def on_nop(msg):
                     print("future cancelled")
-                    if msg['requestId'] == self.requestId:
+                    if msg["requestId"] == self.requestId:
                         future.cancel()
 
                 def on_success(msg):
                     print("future success")
                     event_loop.call_soon_threadsafe(future.set_result, msg)
-                failure_listener = MessageListener(
-                    "nop", on_nop)
-                success_listener = MessageListener(
-                    payload['type'], on_success)
-                future.add_done_callback(lambda fut: (
-                    failure_listener.destroy(), success_listener.destroy()))
+
+                failure_listener = MessageListener("nop", on_nop)
+                success_listener = MessageListener(payload["type"], on_success)
+                future.add_done_callback(
+                    lambda fut: (failure_listener.destroy(), success_listener.destroy())
+                )
                 self.send_message(payload)
                 print("future before")
 
@@ -161,14 +181,47 @@ class ConnectionManager():
 
 def override_image(image, conn_manager):
     doc = Krita.instance().activeDocument()
-    depth = int(doc.colorDepth()[1:])//2
+    depth = int(doc.colorDepth()[1:]) // 2
     size = [doc.width(), doc.height()]
-    ConnectionManager.linked_document = doc
-    print(size, "memsize", conn_manager.shm.size, size[0]*size[1]*depth, depth ,doc.colorDepth()[1:])
+    conn_manager.linked_document = doc
+    print(
+        size,
+        "memsize",
+        conn_manager.shm.size,
+        size[0] * size[1] * depth,
+        depth,
+        doc.colorDepth()[1:],
+        image,
+        conn_manager.linked_document
+    )
     # if size[0]*size[1]*depth > conn_manager.shm.size:
     print("resizing")
-    conn_manager.resize_memory(size[0]*size[1]*depth)
-    asyncio.run(conn_manager.request(
-                {"data": image, "type": "OVERRIDE_IMAGE"}))
-    asyncio.run(conn_manager.request(
-                {"data": "", "type": "GET_IMAGES"}))
+    conn_manager.resize_memory(size[0] * size[1] * depth)
+    asyncio.run(conn_manager.request({"data": image, "type": "OVERRIDE_IMAGE"}))
+    asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
+
+
+def change_memory(conn_manager: ConnectionManager):
+    doc = Krita.instance().activeDocument()
+    size = [doc.width(), doc.height()]
+    depth = int(doc.colorDepth()[1:]) // 2
+    active_image = conn_manager.get_active_image()
+    if not conn_manager.connection:
+        return
+    elif not active_image or active_image['size'] != size:
+        asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
+
+    ConnectionManager.linked_document = doc
+
+    print(
+        size,
+        "memsize",
+        conn_manager.shm.size,
+        size[0] * size[1] * depth,
+        depth,
+        doc.colorDepth()[1:],
+    )
+    print("resizing")
+    conn_manager.resize_memory(size[0] * size[1] * depth)
+    asyncio.run(conn_manager.request({"data": active_image, "type": "OVERRIDE_IMAGE"}))
+    asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
