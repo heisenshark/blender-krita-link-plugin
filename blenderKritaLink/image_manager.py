@@ -32,9 +32,7 @@ class ImageManager:
             mirrored_pixels = np.divide(mirrored_pixels,np.array(np.float32(255*255))) 
         
         if(isinstance( mirrored_pixels[0] , np.uint8)):
-            mirrored_pixels = np.divide(mirrored_pixels,np.array(np.float32(255))) 
-        
-        np.issctype
+            mirrored_pixels = np.divide(mirrored_pixels,np.array(np.float32(255)))         
         print(mirrored_pixels[0],mirrored_pixels[1])
 
         image.pixels.foreach_set(mirrored_pixels.astype(np.float32))
