@@ -50,6 +50,7 @@ class KritaConnection():
             # self.update_message("connected")
             KritaConnection.CONNECTION = conn
             print("connection accepted")
+            ImageManager.INSTANCE.set_image_name(None)
             existing_shm = shared_memory.SharedMemory(name='krita-blender')
             try:
                 while True:
@@ -61,6 +62,7 @@ class KritaConnection():
                     if msg == 'close':
                         print(msg)
                         conn.close()
+                        ImageManager.INSTANCE.set_image_name(None)
                         self.update_message("closed")
                         break
                     elif isinstance(msg, object):
@@ -147,6 +149,14 @@ class KritaConnection():
                                     conn.send({
                                         "type": "CLOSE_MEMORY",
                                         "data": "",
+                                        "requestId": msg['requestId']
+                                    })
+
+                                case "REMOVE_LINK":
+                                    ImageManager.INSTANCE.set_image_name(None)
+                                    conn.send({
+                                        "type": "REMOVE_LINK",
+                                        "data": None,
                                         "requestId": msg['requestId']
                                     })
 
