@@ -1,4 +1,4 @@
-from krita import Krita, DockWidget, QtWidgets, QOpenGLWidget, QtCore
+from krita import Krita, DockWidget, QOpenGLWidget, QtCore
 from PyQt5.QtWidgets import (
     QPushButton,
     QLabel,
@@ -13,9 +13,10 @@ from PyQt5.QtWidgets import (
 )
 from threading import Timer, Thread
 import asyncio
-from .connection import ConnectionManager
+from .connection import ConnectionManager, change_memory
 from .ui.ImageList import ImageList
 from .settings import Settings
+from .ImageState import ImageState
 
 DOCKER_TITLE = "Blender Krita Link"
 
@@ -29,10 +30,13 @@ class BlenderKritaLink(DockWidget):
         super().__init__()
         print(Settings.getSetting("listenCanvas"))
         self.connection = ConnectionManager()
-        appNotifier = Krita.instance().notifier()
-        appNotifier.setActive(True)
-        appNotifier.windowCreated.connect(self.listen)
         self.avc_connected = False
+        ImageState.instance.onImageDataChange.connect(
+            lambda x: change_memory(self.connection) and print("image file changed")
+        )
+        ImageState.instance.onPixelsChange.connect(
+            lambda x: self.on_update_image() and print("drawed smh")
+        )
         self.setupUi()
 
     def setupUi(self):
@@ -102,6 +106,13 @@ class BlenderKritaLink(DockWidget):
 
         self.verticalLayout.addWidget(self.getImageDataButton)
 
+        self.colorSpaceLabel = QLabel("Please Use sRGB Color Space")
+        self.colorSpaceLabel.setHidden(True)
+        self.verticalLayout.addWidget(self.colorSpaceLabel)
+
+        self.imageToSrgbButton = QPushButton("Current Image to sRGB", self.verticalFrame)
+        self.verticalLayout.addWidget(self.imageToSrgbButton)
+
         spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout.addItem(spacerItem)
@@ -112,6 +123,14 @@ class BlenderKritaLink(DockWidget):
         self.DisconnectButton.clicked.connect(self.connection.disconnect)
         self.SendDataButton.clicked.connect(self.send_pixels)
         self.getImageDataButton.clicked.connect(self.get_image_data)
+        self.imageToSrgbButton.clicked.connect(self.image_to_srgb)
+
+        ImageState.instance.onSRGBColorSpace.connect(
+            lambda matching: (
+                self.colorSpaceLabel.setHidden(matching),
+                print("kurwa kuwatwe: ", matching),
+            )
+        )
 
     def connect_blender(self):
         doc = Krita.instance().activeDocument()
@@ -119,8 +138,11 @@ class BlenderKritaLink(DockWidget):
         self.connection.connect(
             len(pixelBytes),
             self.on_blender_connected,
-            lambda: self.connectedLabel.setText(
-                "Connection status: blender disconnected"
+            lambda: (
+                self.connectedLabel.setText(
+                    "Connection status: blender disconnected",
+                ),
+                ImageList.instance.clear_signal.emit(),
             ),
         )
         print("bytes count: ", len(pixelBytes))
@@ -147,12 +169,21 @@ class BlenderKritaLink(DockWidget):
 
     def send_pixels(self):
         doc = Krita.instance().activeDocument()
-        if doc != self.connection.linked_document:
+        linked_doc = self.connection.linked_document
+        print(doc, linked_doc)
+        if doc != linked_doc or not linked_doc:
+            return
+
+        print(self.connection.get_active_image()["size"], [doc.width(), doc.height()])
+
+        if self.connection.get_active_image()["size"] != [doc.width(), doc.height()]:
+            self.connection.remove_link()
             return
         if self.advancedRefresh == 1:
             self.refresh_document(doc)
         elif self.advancedRefresh == 2:
             doc.refreshProjection()
+
         pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
 
         def write_mem():
@@ -165,34 +196,15 @@ class BlenderKritaLink(DockWidget):
         Thread(target=write_mem).start()
 
     def on_listen_change(self, checked):
-        print(checked)
+        print("draw Listen changed", checked)
         Settings.setSetting("listenCanvas", checked == 2)
 
-    def on_data_send(self):
-        self.send_pixels()
-
-    def onUpdateImage(self):
+    def on_update_image(self):
         if not Settings.getSetting("listenCanvas"):
             return
 
-        t = Timer(0.25, self.on_data_send)
+        t = Timer(0.25, self.send_pixels)
         t.start()
-
-    def listen(self):
-        QtWidgets.qApp.installEventFilter(self)
-
-        Krita.instance().action("edit_undo").triggered.connect(
-            lambda x: self.onUpdateImage()
-        )
-        Krita.instance().action("edit_redo").triggered.connect(
-            lambda x: self.onUpdateImage()
-        )
-        Krita.instance().action("image_properties").triggered.connect(
-            lambda x: print("properties clicked/changed")
-        )
-        Krita.instance().action("KritaShape/KisToolBrush").triggered.connect(
-            lambda x: print("omg - brush did brushing")
-        )
 
     def canvasChanged(self, canvas):
         print("something Happened")
@@ -201,10 +213,5 @@ class BlenderKritaLink(DockWidget):
         print("active view changed")
         self.get_image_data()
 
-    def eventFilter(self, obj, event):
-        if isinstance(obj, QOpenGLWidget):
-            if event.type() == 3 and event.button() == 1:
-                print(obj, type(obj).__bases__)
-                self.onUpdateImage()
-                print("painted Something on", event.type(), event.button())
-        return False
+    def image_to_srgb(self):
+        Krita.instance().action("image_properties").trigger()
