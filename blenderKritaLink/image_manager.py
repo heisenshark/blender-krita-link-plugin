@@ -20,20 +20,35 @@ class ImageManager:
         print("hello from mirror_image")
         width = image.size[0]
         height = image.size[1]
-        print("hello from mirror_image" , len(image.pixels),len(image_pixels), width, height)
-        image_pixels.resize(len(image.pixels))
+        print(
+            "hello from mirror_image",
+            len(image.pixels),
+            len(image_pixels),
+            width,
+            height,
+        )
 
+        image_pixels = image_pixels.reshape(width * height,4)
+        if isinstance(image_pixels[0][0], np.uint16) or isinstance(
+            image_pixels[0][0], np.uint8
+        ):
+            image_pixels[:, [2, 0]] = image_pixels[:, [0, 2]]
+
+        image_pixels.resize(len(image.pixels))
         pixels_reshaped = image_pixels.reshape((height, width, 4))
+
         mirrored_pixels = np.flipud(pixels_reshaped).flatten()
         print("hello from mirror_image", len(mirrored_pixels), len(pixels_reshaped))
-        print(mirrored_pixels[0],mirrored_pixels[1],type(mirrored_pixels[0]))
-        
-        if(isinstance( mirrored_pixels[0] , np.uint16)):
-            mirrored_pixels = np.divide(mirrored_pixels,np.array(np.float32(255*255))) 
-        
-        if(isinstance( mirrored_pixels[0] , np.uint8)):
-            mirrored_pixels = np.divide(mirrored_pixels,np.array(np.float32(255)))         
-        print(mirrored_pixels[0],mirrored_pixels[1])
+        print(mirrored_pixels[0], mirrored_pixels[1], type(mirrored_pixels[0]))
+
+        if isinstance(mirrored_pixels[0], np.uint16):
+            mirrored_pixels = np.divide(
+                mirrored_pixels, np.array(np.float32(255 * 255))
+            )
+
+        if isinstance(mirrored_pixels[0], np.uint8):
+            mirrored_pixels = np.divide(mirrored_pixels, np.array(np.float32(255)))
+        print(mirrored_pixels[0], mirrored_pixels[1])
 
         image.pixels.foreach_set(mirrored_pixels.astype(np.float32))
 
@@ -64,7 +79,7 @@ class ImageManager:
             return None
         return bpy.data.images[self.IMAGE]
 
-    def set_image_name(self, name: str|None):
+    def set_image_name(self, name: str | None):
         self.IMAGE = name
 
     def get_image_size(self):
