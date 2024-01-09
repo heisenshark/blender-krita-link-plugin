@@ -1,7 +1,6 @@
 import bpy
 import numpy as np
 
-
 class ImageManager:
     INSTANCE = None
 
