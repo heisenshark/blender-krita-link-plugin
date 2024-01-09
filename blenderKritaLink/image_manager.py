@@ -11,6 +11,13 @@ class ImageManager:
         self.IMAGE = None
         ImageManager.INSTANCE = self
 
+    def get_image_data(image_name):
+        data = {}
+        image = bpy.data.images[image_name]
+        if not image:
+            return
+        
+
     def mirror_image(self, image_pixels):
         print("hello from mirror_image")
         image = self.get_image()
@@ -29,6 +36,7 @@ class ImageManager:
         )
 
         image_pixels = image_pixels.reshape(width * height,4)
+
         if isinstance(image_pixels[0][0], np.uint16) or isinstance(
             image_pixels[0][0], np.uint8
         ):
