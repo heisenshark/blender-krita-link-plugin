@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ActionCollection version="2" name="Scripts">
+    <Actions category="Scripts">
+        <text>Send to Blender</text>
+
+        <Action name="send_blender">
+        <icon></icon>
+        <text>Send Blender</text>
+        <whatsThis></whatsThis>
+        <toolTip></toolTip>
+        <iconText></iconText>
+        <activationFlags>10000</activationFlags>
+        <activationConditions>0</activationConditions>
+        <shortcut>alt+F12</shortcut>
+        <isCheckable>false</isCheckable>
+        <statusTip></statusTip>
+        </Action>
+    </Actions>
+</ActionCollection>
