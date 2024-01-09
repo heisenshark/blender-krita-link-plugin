@@ -7,12 +7,14 @@ import bpy
 import numpy as np
 from .image_manager import ImageManager
 from .ui import BlenderKritaLinkPanel
-
+# from .uv_extractor import getUvData
 
 class KritaConnection():
     PORT = 6000
     LINK_INSTANCE = None
     STATUS: str
+    UVS = []
+    sendUVSObject = {}
 
     def __init__(self) -> None:
         if KritaConnection.LINK_INSTANCE:
@@ -37,8 +39,13 @@ class KritaConnection():
         else:
             print("no scene??")
 
+    def send_message(message):
+        if KritaConnection.CONNECTION != None:
+            KritaConnection.CONNECTION.send(message)
+        else:
+            print("no connection available")
+            
     def krita_listener(self):
-        """chuj"""
         while not self.__STOP_SIGNAL.isSet():
             self.update_message("listening")
             KritaConnection.LINK_INSTANCE = self
@@ -159,6 +166,21 @@ class KritaConnection():
                                         "data": None,
                                         "requestId": msg['requestId']
                                     })
+
+                                case "SELECT_UVS":
+                                    print("sending UV data: ")
+                                    print(bpy.context.scene,bpy.context.view_layer,bpy.context.view_layer.objects.active)
+                                    print("sending UV data2 ")
+                                    # bpy.ops.object.get_uvs_operator()
+                                    bpy.ops.object.mode_set(mode='OBJECT', toggle=True)
+                                    KritaConnection.UVS = None
+
+                                    KritaConnection.sendUVSObject = {
+                                        "type": "SELECT_UVS",
+                                        "data": None,
+                                        "requestId": msg['requestId']
+                                    }
+                                    
 
                                 case _:
                                     conn.send({

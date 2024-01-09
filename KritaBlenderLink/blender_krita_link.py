@@ -113,6 +113,9 @@ class BlenderKritaLink(DockWidget):
         self.imageToSrgbButton = QPushButton("Current Image to sRGB", self.verticalFrame)
         self.verticalLayout.addWidget(self.imageToSrgbButton)
 
+        self.selectUVs = QPushButton("Select Selected Uvs", self.verticalFrame)
+        self.verticalLayout.addWidget(self.selectUVs)
+
         spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout.addItem(spacerItem)
@@ -124,6 +127,7 @@ class BlenderKritaLink(DockWidget):
         self.SendDataButton.clicked.connect(self.send_pixels)
         self.getImageDataButton.clicked.connect(self.get_image_data)
         self.imageToSrgbButton.clicked.connect(self.image_to_srgb)
+        self.selectUVs.clicked.connect(self.select_uvs)
 
         ImageState.instance.onSRGBColorSpace.connect(
             lambda matching: (
@@ -215,3 +219,7 @@ class BlenderKritaLink(DockWidget):
 
     def image_to_srgb(self):
         Krita.instance().action("image_properties").trigger()
+
+    def select_uvs(self):
+        uvs = asyncio.run(self.connection.request({"type": "SELECT_UVS"}))
+        print(uvs)
