@@ -29,6 +29,7 @@ class ImageItem(QWidget):
         self.setSizePolicy(sizePolicy1)
         self.horizontalLayout_2 = QHBoxLayout(self)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.horizontalLayout_2.setContentsMargins(0,0,0,0)
         self.label_9 = QLabel(text=image["name"], parent=self)
         self.label_9.setObjectName("label_9")
         if "isActive" in image and image["isActive"]:
@@ -42,7 +43,7 @@ class ImageItem(QWidget):
         self.horizontalLayout_2.addWidget(self.label_size)
 
         self.horizontalSpacer_2 = QSpacerItem(
-            40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum
+            40, 10, QSizePolicy.Expanding, QSizePolicy.Minimum
         )
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
@@ -63,3 +64,15 @@ class ImageItem(QWidget):
         sizePolicy2.setVerticalStretch(0)
         self.horizontalLayout_2.addWidget(self.pushButton_4)
         self.setLayout(self.horizontalLayout_2)
+
+
+    def contextMenuEvent(self, event):
+        cmenu = QMenu(self)
+
+        section = cmenu.addSection(self.image["name"])
+        openAct = cmenu.addAction("From Blender To new Layer")
+        quitAct  = cmenu.addAction("Quit")
+        action = cmenu.exec_(self.mapToGlobal(event.pos()))
+        print(action)
+        # if action == quitAct:
+        #     qApp.quit()

@@ -1,23 +1,20 @@
-from multiprocessing.connection import Connection, Listener, Client
-import time
-from random import random
+from multiprocessing.connection import Connection, Listener
 from threading import Thread, Event
 from multiprocessing import shared_memory
 import bpy
 import numpy as np
 from .image_manager import ImageManager
-from .ui import BlenderKritaLinkPanel
-
+from .uv_extractor import getUvData
 
 class KritaConnection():
     PORT = 6000
+    PASS = b'2137'
     LINK_INSTANCE = None
     STATUS: str
 
     def __init__(self) -> None:
-        if KritaConnection.LINK_INSTANCE:
-            return
-        KritaConnection.LINK_INSTANCE = self
+        if not KritaConnection.LINK_INSTANCE:
+            KritaConnection.LINK_INSTANCE = self
 
     def __del__(self):
         if self.CONNECTION:
@@ -37,17 +34,23 @@ class KritaConnection():
         else:
             print("no scene??")
 
+    @staticmethod
+    def send_message(message):
+        if KritaConnection.CONNECTION != None:
+            KritaConnection.CONNECTION.send(message)
+        else:
+            print("no connection available")
+            
     def krita_listener(self):
-        """chuj"""
+        self.update_message("listening")
         while not self.__STOP_SIGNAL.isSet():
-            self.update_message("listening")
             KritaConnection.LINK_INSTANCE = self
             # family is deduced to be 'AF_INET'
             address = ('localhost', KritaConnection.PORT)
             self.update_message("listening")
-            listener = Listener(address, authkey=b'2137')
+            listener = Listener(address, authkey=KritaConnection.PASS)
             conn = listener.accept()
-            # self.update_message("connected")
+            self.update_message("connected")
             KritaConnection.CONNECTION = conn
             print("connection accepted")
             ImageManager.INSTANCE.set_image_name(None)
@@ -106,7 +109,7 @@ class KritaConnection():
                                             "name": image.name,
                                             "path": bpy.path.abspath(image.filepath),
                                             "size": [image.size[0], image.size[1]],
-                                            "isActive": ImageManager.INSTANCE.IMAGE == image.name
+                                            "isActive": ImageManager.INSTANCE.IMAGE_NAME == image.name
                                         })
 
                                     print(msg)
@@ -127,7 +130,7 @@ class KritaConnection():
 
                                 case "OVERRIDE_IMAGE":
                                     print("overriding image: ",
-                                          msg['data']['name'])
+                                            msg['data']['name'])
                                     ImageManager.INSTANCE.set_image_name(
                                         msg['data']['name'])
                                     conn.send({
@@ -160,6 +163,18 @@ class KritaConnection():
                                         "requestId": msg['requestId']
                                     })
 
+                                case "SELECT_UVS":
+                                    print("sending UV data: ")
+                                    print(bpy.context.scene,bpy.context.view_layer,bpy.context.view_layer.objects.active)
+                                    print("sending UV data2 ")
+                                    data = getUvData()
+                                    conn.send({
+                                        "type": "SELECT_UVS",
+                                        "data": data,
+                                        "requestId": msg['requestId']
+                                    })
+                                    
+
                                 case _:
                                     conn.send({
                                         "type": "nop",
@@ -176,7 +191,8 @@ class KritaConnection():
                     self.CONNECTION.send("close")
                     self.CONNECTION.close()
                 self.CONNECTION = None
-            # existing_shm.close()
+
+            existing_shm.close()
             listener.close()
             if self.__STOP_SIGNAL.is_set():
                 KritaConnection.STATUS = "listening"
