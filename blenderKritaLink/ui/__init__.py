@@ -7,7 +7,7 @@ def update_gui():
     print("elo")
 
 
-class BlenderKritaLinkPanel(bpy.types.Panel):
+class _PT_BlenderKritaLinkPanel(bpy.types.Panel):
     """Blender Krita Link Panel"""
     bl_label = "Krita Link"
     bl_space_type = 'IMAGE_EDITOR'
