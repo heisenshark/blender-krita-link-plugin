@@ -7,7 +7,7 @@ import bpy
 import numpy as np
 from .image_manager import ImageManager
 from .ui import BlenderKritaLinkPanel
-# from .uv_extractor import getUvData
+from .uv_extractor import getUvData
 
 class KritaConnection():
     PORT = 6000
@@ -134,7 +134,7 @@ class KritaConnection():
 
                                 case "OVERRIDE_IMAGE":
                                     print("overriding image: ",
-                                          msg['data']['name'])
+                                            msg['data']['name'])
                                     ImageManager.INSTANCE.set_image_name(
                                         msg['data']['name'])
                                     conn.send({
@@ -172,14 +172,13 @@ class KritaConnection():
                                     print(bpy.context.scene,bpy.context.view_layer,bpy.context.view_layer.objects.active)
                                     print("sending UV data2 ")
                                     # bpy.ops.object.get_uvs_operator()
-                                    bpy.ops.object.mode_set(mode='OBJECT', toggle=True)
                                     KritaConnection.UVS = None
-
-                                    KritaConnection.sendUVSObject = {
+                                    data = getUvData()
+                                    conn.send({
                                         "type": "SELECT_UVS",
-                                        "data": None,
+                                        "data": data,
                                         "requestId": msg['requestId']
-                                    }
+                                    })
                                     
 
                                 case _:
@@ -198,7 +197,8 @@ class KritaConnection():
                     self.CONNECTION.send("close")
                     self.CONNECTION.close()
                 self.CONNECTION = None
-            # existing_shm.close()
+
+            existing_shm.close()
             listener.close()
             if self.__STOP_SIGNAL.is_set():
                 KritaConnection.STATUS = "listening"
