@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
     QLayout,
+    QDockWidget
 )
 from threading import Timer, Thread
 import asyncio
@@ -17,6 +18,8 @@ from .connection import ConnectionManager, MessageListener, change_memory
 from .ui.ImageList import ImageList
 from .settings import Settings
 from .ImageState import ImageState
+from PyQt5 import uic
+import os as os 
 
 DOCKER_TITLE = "Blender Krita Link"
 
@@ -37,105 +40,28 @@ class BlenderKritaLink(DockWidget):
         ImageState.instance.onPixelsChange.connect(
             lambda x: self.on_update_image() and print("drawed smh")
         )
-        self.setupUi()
+
+        self.setWindowTitle("Blender Krita Link")
+        self.centralWidget = uic.loadUi( os.path.join(os.path.dirname(os.path.realpath(__file__)),"BlenderKritaLinkUI.ui" ))
+        self.setWidget(self.centralWidget)
+
+        self.centralWidget.SendOnDrawCheckbox.stateChanged.connect(self.on_listen_change)
+
+        self.centralWidget.ConnectButton.clicked.connect(self.connect_blender)
+        self.centralWidget.DisconnectButton.clicked.connect(self.connection.disconnect)
+        self.centralWidget.SendDataButton.clicked.connect(self.send_pixels)
+        self.centralWidget.RefreshImagesButton.clicked.connect(self.get_image_data)
+        self.centralWidget.ImageTosRGBButton.clicked.connect(self.image_to_srgb)
+        self.centralWidget.SelectUVIslandsButton.clicked.connect(self.select_uvs)
+
+        ImageList(parent=self.centralWidget.ImagesFrame, con_manager=self.connection)
+        self.centralWidget.ImagesFrame.layout().addWidget(ImageList.instance)
+
+
+        print(self.centralWidget, self.centralWidget.ConnectButton) 
+        print(os.path.join(os.path.dirname(os.path.realpath(__file__)),"BlenderKritaLinkUI.ui" ))
+
         MessageListener("SELECT_UVS",lambda m: self.handle_uv_response(m))
-
-    def setupUi(self):
-        self.setWindowTitle(DOCKER_TITLE)
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-        self.setAllowedAreas(QtCore.Qt.AllDockWidgetAreas)
-        self.dockWidgetContents = QWidget()
-        self.dockWidgetContents.setObjectName(DOCKER_TITLE)
-        self.dockWidgetContents.setEnabled(True)
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.dockWidgetContents.sizePolicy().hasHeightForWidth()
-        )
-        self.dockWidgetContents.setSizePolicy(sizePolicy)
-        self.dockWidgetContents.setObjectName("dockWidgetContents")
-
-        self.horizontalLayout = QHBoxLayout(self.dockWidgetContents)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-
-        self.verticalFrame = QFrame(self.dockWidgetContents)
-        self.verticalFrame.setEnabled(True)
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.verticalFrame.sizePolicy().hasHeightForWidth()
-        )
-        self.verticalFrame.setSizePolicy(sizePolicy)
-        self.verticalFrame.setFrameShape(QFrame.NoFrame)
-        self.verticalFrame.setObjectName("verticalFrame")
-        self.verticalLayout = QVBoxLayout(self.verticalFrame)
-        self.verticalLayout.setSizeConstraint(QLayout.SetMaximumSize)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.connectedLabel = QLabel("Connection status: innactive", self.verticalFrame)
-        self.connectedLabel.setObjectName("connected Label")
-        self.verticalLayout.addWidget(self.connectedLabel)
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.ConnectButton = QPushButton(
-            "Connect",
-            self.verticalFrame,
-        )
-        self.ConnectButton.setObjectName("ConnectButton")
-        self.horizontalLayout_2.addWidget(self.ConnectButton)
-        self.DisconnectButton = QPushButton("Disconnect", self.verticalFrame)
-        self.DisconnectButton.setObjectName("DisconnectButton")
-        self.horizontalLayout_2.addWidget(self.DisconnectButton)
-        self.verticalLayout.addLayout(self.horizontalLayout_2)
-        self.SendDataButton = QPushButton("Send data", self.verticalFrame)
-        self.SendDataButton.setObjectName("SendDataButton")
-        self.verticalLayout.addWidget(self.SendDataButton)
-        self.canvasListenCheckbox = QCheckBox(text="Update on drawing?")
-        self.canvasListenCheckbox.setCheckState(Settings.getSetting("listenCanvas"))
-        self.canvasListenCheckbox.setTristate(False)
-        self.canvasListenCheckbox.stateChanged.connect(self.on_listen_change)
-        self.verticalLayout.addWidget(self.canvasListenCheckbox)
-        ImageList(parent=self.verticalFrame, con_manager=self.connection)
-        self.verticalLayout.addWidget(ImageList.instance)
-        self.getImageDataButton = QPushButton("Refresh Images", self.verticalFrame)
-        self.getImageDataButton.setObjectName("getImageDataButton")
-
-        self.verticalLayout.addWidget(self.getImageDataButton)
-
-        self.colorSpaceLabel = QLabel("Please Use sRGB Color Space")
-        self.colorSpaceLabel.setHidden(True)
-        self.verticalLayout.addWidget(self.colorSpaceLabel)
-
-        self.imageToSrgbButton = QPushButton("Current Image to sRGB", self.verticalFrame)
-        self.verticalLayout.addWidget(self.imageToSrgbButton)
-
-        self.selectUVs = QPushButton("Select Selected Uvs", self.verticalFrame)
-        self.verticalLayout.addWidget(self.selectUVs)
-
-        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-
-        self.verticalLayout.addItem(spacerItem)
-        self.dockWidgetContents.layout().addWidget(self.verticalFrame)
-        self.setWidget(self.dockWidgetContents)
-
-        self.ConnectButton.clicked.connect(self.connect_blender)
-        self.DisconnectButton.clicked.connect(self.connection.disconnect)
-        self.SendDataButton.clicked.connect(self.send_pixels)
-        self.getImageDataButton.clicked.connect(self.get_image_data)
-        self.imageToSrgbButton.clicked.connect(self.image_to_srgb)
-        self.selectUVs.clicked.connect(self.select_uvs)
-
-        ImageState.instance.onSRGBColorSpace.connect(
-            lambda matching: (
-                self.colorSpaceLabel.setHidden(matching),
-                print("kurwa kuwatwe: ", matching),
-            )
-        )
 
     def connect_blender(self):
         doc = Krita.instance().activeDocument()
@@ -144,7 +70,7 @@ class BlenderKritaLink(DockWidget):
             len(pixelBytes),
             self.on_blender_connected,
             lambda: (
-                self.connectedLabel.setText(
+                self.centralWidget.ConnectionStatus.setText(
                     "Connection status: blender disconnected",
                 ),
                 ImageList.instance.clear_signal.emit(),
@@ -158,7 +84,7 @@ class BlenderKritaLink(DockWidget):
         self.avc_connected = True
 
     def on_blender_connected(self):
-        self.connectedLabel.setText("Connection status: blender connected")
+        self.centralWidget.ConnectionStatus.setText("Connection status: blender connected")
         Thread(target=self.get_image_data).start()
 
     def get_image_data(self):
