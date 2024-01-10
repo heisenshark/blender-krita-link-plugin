@@ -1,7 +1,5 @@
 from krita import DockWidgetFactory, DockWidgetFactoryBase, Krita
 from .blender_krita_link import BlenderKritaLink
-import asyncio
-
 
 DOCKER_ID = 'template_docker'
 instance = Krita.instance()

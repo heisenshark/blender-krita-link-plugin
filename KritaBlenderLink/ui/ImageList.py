@@ -32,6 +32,7 @@ class ImageList(QScrollArea):
         self.scrollAreaWidgetContents.setMinimumSize(QSize(0, 0))
         self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout_2.setContentsMargins(5,0,5,0)
         self.setWidget(self.scrollAreaWidgetContents)
         self.refresh_signal.connect(self.update_images_list)
         self.clear_signal.connect(self.clear_images_list)
