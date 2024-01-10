@@ -66,8 +66,6 @@ class ConnectionManager:
                 print("client created")
                 self.connection = connection
                 on_connect()
-                # t2 = Thread(target=thread2)
-                # t2.start()
                 while True:
                     try:
                         message = self.connection.recv()
@@ -123,9 +121,6 @@ class ConnectionManager:
             )
         asyncio.run(self.request({"type": "RECREATE_MEMORY", "data": ""}))
 
-    #  def on_disconnect():
-    #   print("disconnected from blender")
-
     def send_message(self, message):
         if self.connection:
             self.connection.send(message)
@@ -144,8 +139,6 @@ class ConnectionManager:
         asyncio.run(self.request({"data": "", "type": "REMOVE_LINK"}))
         asyncio.run(self.request({"data": "", "type": "GET_IMAGES"}))
         
-
-
     async def request(self, payload):
         if self.connection:
             event_loop = asyncio.get_event_loop()
@@ -194,7 +187,6 @@ def override_image(image, conn_manager):
         image,
         conn_manager.linked_document
     )
-    # if size[0]*size[1]*depth > conn_manager.shm.size:
     print("resizing")
     conn_manager.resize_memory(size[0] * size[1] * depth)
     asyncio.run(conn_manager.request({"data": image, "type": "OVERRIDE_IMAGE"}))
