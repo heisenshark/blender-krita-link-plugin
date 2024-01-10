@@ -39,7 +39,6 @@ K_PLUGIN_FACTORY_WITH_JSON(UVselectFactory, "kritashapesselection.json", registe
 UvSelect::UvSelect(QObject *parent, const QVariantList &)
     : KisActionPlugin(parent)
 {
-    std::cout<<"AAAAAAAAAAAA\n";
     action = createAction("select_shapes");
     connect(action, &QAction::triggered, [this](){ slotSample(false); });
 }
@@ -53,8 +52,8 @@ void UvSelect::slotSample(bool sampleRealCanvas)
     p << QPointF(0.0, 0.0) <<QPointF(0.0, 0.0) <<QPointF(0.0, 0.0)<<QPointF(0.0, 0.0);
     selectPolygon(p,SELECTION_REPLACE);
     QVariant v = action->data();
-    std::cout<< "Type: " <<v.type()<<"\n";
-    std::cout<< "Akcja: \n";
+    // std::cout<< "Type: " <<v.type()<<"\n";
+    // std::cout<< "Action: \n";
     if(v.type()==QMetaType::QVariantList)
     {
         auto polygons = v.toList();
@@ -64,10 +63,10 @@ void UvSelect::slotSample(bool sampleRealCanvas)
             auto points = polygon.toList();
             for(QVariant point: points){
                 auto coords = point.toList();
-                std::cout<< coords[0].toDouble()<< " , " <<coords[1].toDouble()<<";";
+                // std::cout<< coords[0].toDouble()<< " , " <<coords[1].toDouble()<<";";
                 cds<<QPointF(coords[0].toDouble(),coords[1].toDouble());
             }
-            std::cout<<"\n----\n";
+            // std::cout<<"\n----\n";
             pointsList << cds;
         }
         selectPolygons(pointsList,SELECTION_ADD);
@@ -84,13 +83,7 @@ void UvSelect::selectPolygon(QVector<QPointF> &points,SelectionAction actionMode
     if (!kisCanvas)
         return;
 
-    // const QRectF boundingViewRect = pixelToView(KisAlgebra2D::accumulateBounds(points));
-
     KisSelectionToolHelper helper(kisCanvas, kundo2_i18n("Select Polygon"));
-
-    // if (helper.tryDeselectCurrentSelection(pixelToView(boundingViewRect), 0)) {
-    //     return;
-    // }
 
     KoPathShape* path = new KoPathShape();
     path->setShapeId(KoPathShapeId);
@@ -115,13 +108,7 @@ void UvSelect::selectPolygons(QVector<QVector<QPointF>> &pointsList,SelectionAct
     if (!kisCanvas)
         return;
 
-    // const QRectF boundingViewRect = pixelToView(KisAlgebra2D::accumulateBounds(points));
-
     KisSelectionToolHelper helper(kisCanvas, kundo2_i18n("Select Polygon"));
-
-    // if (helper.tryDeselectCurrentSelection(pixelToView(boundingViewRect), 0)) {
-    //     return;
-    // }
 
     QList<KoShape*> shapes;
     for(QVector<QPointF> points: pointsList){
@@ -138,38 +125,6 @@ void UvSelect::selectPolygons(QVector<QVector<QPointF>> &pointsList,SelectionAct
         shapes<<path;
     }
     helper.addSelectionShapes(shapes, actionMode);
-    // qDeleteAll(shapes);
-    // QList<KoShape*>::iterator i;
-    // for (i = shapes.begin(); i != shapes.end(); i++) {
-    //     delete (*i);
-    // }
-
-    // for(KoShape* s: shapes) {
-    //     std::cout << s<<"\n";
-    //     // delete s;
-    // }
 }
 
 #include "UvSelect.moc"
-
-
-    // KisScreenColorSampler *screenColorSampler = new KisScreenColorSampler(false);
-    // screenColorSampler->setPerformRealColorSamplingOfCanvas(sampleRealCanvas);
-    // screenColorSampler->setCurrentColor(viewManager()->canvasResourceProvider()->fgColor());
-    // // screenColorSampler is a temporary top level widget own by no other
-    // // QObject, so it must be automatically deleted when it is closed 
-    // screenColorSampler->setAttribute(Qt::WA_DeleteOnClose);
-    // connect(screenColorSampler, &KisScreenColorSampler::sigNewColorSampled,
-    //     [this, screenColorSampler](KoColor sampledColor)
-    //     {
-    //         viewManager()->canvasResourceProvider()->slotSetFGColor(sampledColor);
-    //         screenColorSampler->close();
-    //     }
-    // );
-    // connect(screenColorSampler, &KisScreenColorSampler::sigNewColorHovered,
-    //     [this, screenColorSampler](KoColor sampledColor)
-    //     {
-    //         viewManager()->canvasResourceProvider()->slotSetFGColor(sampledColor);
-    //     }
-    // );
-    // screenColorSampler->sampleScreenColor();

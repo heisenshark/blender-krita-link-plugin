@@ -2,6 +2,7 @@
 !readme.md
 !.gitignore
 !/BlenderKritaLink
+!/blenderKritaLink
 !/KritaBlenderLink
 !cppPart
 /KritaBlenderLink/__pycache__

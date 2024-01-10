@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (
 )
 from threading import Timer, Thread
 import asyncio
-from .connection import ConnectionManager, change_memory
+from .connection import ConnectionManager, MessageListener, change_memory
 from .ui.ImageList import ImageList
 from .settings import Settings
 from .ImageState import ImageState
@@ -38,6 +38,7 @@ class BlenderKritaLink(DockWidget):
             lambda x: self.on_update_image() and print("drawed smh")
         )
         self.setupUi()
+        MessageListener("SELECT_UVS",lambda m: self.handle_uv_response(m))
 
     def setupUi(self):
         self.setWindowTitle(DOCKER_TITLE)
@@ -223,3 +224,18 @@ class BlenderKritaLink(DockWidget):
     def select_uvs(self):
         uvs = asyncio.run(self.connection.request({"type": "SELECT_UVS"}))
         print(uvs)
+
+    def handle_uv_response(self, message):
+        print("handle uvs triggered", message)
+        action = Krita.instance().action("select_shapes")
+        width_height = [Krita.instance().activeDocument().width(),Krita.instance().activeDocument().height()]
+        groups = message['data']
+        if action != None:
+            print("action exists")
+            for g in groups:
+                for f in g:
+                    f[0] *= width_height[0]
+                    f[1] *= width_height[1]
+            action.setData(groups)
+            action.trigger()
+            action.setData([])

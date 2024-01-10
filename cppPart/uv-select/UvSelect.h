@@ -5,13 +5,12 @@
  *  SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-#ifndef KISSAMP_H
-#define KISSAMP_H
+#ifndef UVSELECT_H
+#define UVSELECT_H
 
 #include <QVariant>
 
 #include "KisActionPlugin.h"
-// #include "kis_types.h"
 #include "KisSelectionTags.h"
 
 class UvSelect : public KisActionPlugin
@@ -30,4 +29,4 @@ public:
     KisAction *action;
 };
 
-#endif // KISSAMP_H
+#endif // UVSELECT_H

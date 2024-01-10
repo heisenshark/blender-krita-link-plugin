@@ -28,4 +28,18 @@ If Update on draw is set the image will update in blender if you release draw bu
 
 Refresh Images refreshes images data from blender
 
+## UVselectAddition Installation
+
+The UV selection command kinda works(in many cases but requires uvs of your selected object to not look like nightmare) but for it to work you need to install UVselectAddition somehow for a simple and maybe useful feature of creating krita selection area from uv map 
+
+But you need to compile it first to do it
+- you need to compile krita from source, thankfully there are guides [compile the krita](https://docs.krita.org/en/untranslatable_pages/building_krita.html) or if you are having problems(very probable) [compile the krita using docker](https://docs.krita.org/en/untranslatable_pages/building/build_krita_with_docker_on_linux.html)
+- put the `uv-select` inside the  `krita>plugins` directory and 
+- create appImage according to tutorials
+- extract libraries(and action files) to your krita installation according to this [excellent repo](https://github.com/Acly/krita-ai-tools) and its releases
+
+I haven't built it on windows yet so good luck with trying it on this platform.
+
+Of course UvSelectionAddition is not required for python plugin to work
+
 # Plugin is highly experimental and there **WILL** be bugs so be aware and if you wanna help this plugin grow contact me, make pull requests or smh
