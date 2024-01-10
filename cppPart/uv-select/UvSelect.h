@@ -1,10 +1,3 @@
-/*
- *  SPDX-FileCopyrightText: 2023 killy |0veufOrever <80536642@qq.com>
- *  SPDX-FileCopyrightText: 2023 Deif Lou <ginoba@gmail.com>
- *
- *  SPDX-License-Identifier: GPL-2.0-or-later
- */
-
 #ifndef UVSELECT_H
 #define UVSELECT_H
 
