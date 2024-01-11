@@ -76,7 +76,13 @@ class ImageManager:
     def get_image(self):
         if not self.IMAGE_NAME:
             return None
-        return bpy.data.images[self.IMAGE_NAME]
+        image_data = bpy.data.images[self.IMAGE_NAME]
+        depth = image_data.depth
+        channels = image_data.channels
+
+        krita_format = 8
+        pixels_array = np.array()
+
 
     def set_image_name(self, name: str | None):
         self.IMAGE_NAME = name

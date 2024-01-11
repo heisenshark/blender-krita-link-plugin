@@ -192,6 +192,27 @@ def override_image(image, conn_manager):
     asyncio.run(conn_manager.request({"data": image, "type": "OVERRIDE_IMAGE"}))
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
 
+def blender_image_as_new_layer(image, conn_manager):
+    asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
+    asyncio.run(conn_manager.request({"data": image, "type": "IMAGE_TO_LAYER"}))
+
+    doc = Krita.instance().activeDocument()
+    depth = int(doc.colorDepth()[1:]) // 2
+    size = [doc.width(), doc.height()]
+    conn_manager.linked_document = doc
+    print(
+        size,
+        "memsize",
+        conn_manager.shm.size,
+        size[0] * size[1] * depth,
+        depth,
+        doc.colorDepth()[1:],
+        image,
+        conn_manager.linked_document
+    )
+    print("resizing")
+    conn_manager.resize_memory(size[0] * size[1] * depth)
+
 
 def change_memory(conn_manager: ConnectionManager):
     doc = Krita.instance().activeDocument()
