@@ -34,9 +34,9 @@ class ImageItem(QWidget):
         self.horizontalLayout_2.setContentsMargins(0,0,0,0)
         self.label_9 = QLabel(text=image["name"], parent=self)
         self.label_9.setObjectName("label_9")
-        if "isActive" in image and image["isActive"]:
-            self.label_9.setStyleSheet("font-weight: bold")
 
+        if "isActive" in image and image["isActive"]:
+            self.label_9.setStyleSheet("font-weight: bold; color: green;")
 
         self.image_size = image["size"]
         if not (self.image_size[0] == width and self.image_size[1] == height):
@@ -65,20 +65,6 @@ class ImageItem(QWidget):
 
     def contextMenuEvent(self, event):
         cmenu = QMenu(self)
-
-        # self.pushButton_4 = QPushButton("Override", self)
-
-        # if not (image["size"][0] == width and image["size"][1] == height):
-        #     print(image["size"], width, height)
-        #     self.pushButton_4.setStyleSheet("color: red;")
-        #     self.pushButton_4.setDisabled(True)
-        # self.pushButton_4.setObjectName("Override")
-        # self.pushButton_4.setSizePolicy(
-        #     QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
-        # )
-        # self.pushButton_4.clicked.connect(lambda: on_override(self.image))
-        # self.horizontalLayout_2.addWidget(self.pushButton_4)
-
 
         section = cmenu.addSection(self.image["name"])
         openAct = cmenu.addAction("From Blender To new Layer")

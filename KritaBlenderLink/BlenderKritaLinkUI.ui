@@ -20,7 +20,7 @@
    <item>
     <widget class="QLabel" name="ConnectionStatus">
      <property name="text">
-      <string>TextLabel</string>
+      <string>Connection status: blender disconnected</string>
      </property>
     </widget>
    </item>
