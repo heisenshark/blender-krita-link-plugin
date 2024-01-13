@@ -6,6 +6,7 @@ from multiprocessing.connection import Client
 import asyncio
 from pprint import pprint
 from contextlib import contextmanager
+import time
 
 @contextmanager
 def shared_memory_context(name:str,size:int,destroy:bool,create=bool):
@@ -22,6 +23,14 @@ def shared_memory_context(name:str,size:int,destroy:bool,create=bool):
             shm.unlink()
         else:
             shm.close()
+
+def check_shared_memory_exists(name):
+    try:
+        shm = shared_memory.SharedMemory(name=name)
+        shm.close() 
+        return True
+    except FileNotFoundError:
+        return False
 
 
 class MessageListener:
@@ -84,9 +93,10 @@ class ConnectionManager:
                     except Exception as e:
                         print("Error on reciving messages", e)
                         self.connection = None
-                        if self.shm:
+                        if self.shm and check_shared_memory_exists("krita-blender"):
                             # self.shm.close()
                             self.shm.unlink()
+                            self.shm = None
                         on_disconnect()
                         break
 
@@ -94,8 +104,7 @@ class ConnectionManager:
         t1.start()
 
     def disconnect(self):
-        if self.shm:
-            self.shm.close()
+        if self.shm and check_shared_memory_exists("krita-blender"):
             self.shm.unlink()
         if self.connection:
             self.connection.send("close")
@@ -116,8 +125,9 @@ class ConnectionManager:
 
     def resize_memory(self, canvas_bytes_len):
         print("unlink")
-        if self.shm != None:
+        if self.shm and check_shared_memory_exists("krita-blender"):
             self.shm.unlink()
+            self.shm = None
         # self.shm.close()
         asyncio.run(self.request({"type": "CLOSE_MEMORY", "data": ""}))
         try:
@@ -177,7 +187,7 @@ class ConnectionManager:
                 print("future before")
 
             await asyncio.create_task(chuj())
-            res = await asyncio.wait_for(future, 1.0)
+            res = await asyncio.wait_for(future, 3.0)
             print("future done")
             return res
         return None
@@ -202,32 +212,59 @@ def override_image(image, conn_manager):
     asyncio.run(conn_manager.request({"data": image, "type": "OVERRIDE_IMAGE"}))
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
 
+def refresh_document(doc):
+    root_node = doc.rootNode()
+    if root_node and len(root_node.childNodes()) > 0:
+        test_layer = doc.createNode("DELME", "paintLayer")
+        root_node.addChildNode(test_layer, root_node.childNodes()[0])
+        test_layer.remove()
+
+
 def blender_image_as_new_layer(image_object, conn_manager):
+    
     depth = Krita.instance().activeDocument().colorDepth()
-    images = asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
+    images = asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))['data']
     data = asyncio.run(conn_manager.request({"data": {"image":image_object,"depth":depth}, "type": "IMAGE_TO_LAYER"}))
-    image = None
-    
-    for i in images:
-        if i['name'] == image_object['name']:
-            image = i
-    if not image: 
-        return    
-    
-    with shared_memory_context(name='blender-krita',destroy=True, size=image["size"][0]*image["size"][1]*4,create=False) as new_shm:
-        mv = memoryview(new_shm.buf).cast('f')
+    t = time.time()
+    print("time: ",time.time() - t)
+    pixel_size = 0
+    match depth:
+        case "F32": 
+            pixel_size = 4
+        case "F16": 
+            pixel_size = 2
+        case "U16": 
+            pixel_size = 2
+        case "U8": 
+            pixel_size = 1
+
+    with shared_memory_context(name='blender-krita',destroy=True, size=image_object["size"][0]*image_object["size"][1]*pixel_size,create=False) as new_shm:
+        print("time: ",time.time() - t)
+        image = None
+        pprint(images)
+        
+        for i in images:
+            if i['name'] == image_object['name']:
+                image = i
+        if not image: 
+            return
+        print("time: ",time.time() - t)
         krita_instance = Krita.instance()
         document = krita_instance.activeDocument()
+        print("time: ",time.time() - t)
         if document:
-
-            new_layer = document.createNode(image['name']+"__from_blender", "paintLayer")
+            print("time: ",time.time() - t)
+            new_layer = document.createNode(image['name'] + "__from_blender", "paintLayer")
             document.rootNode().addChildNode(new_layer, None)
-            new_layer.setPixelData(mv.tobytes(), 0, 0, image["size"][0],image["size"][1])
-            # document.refreshProjection() #Probably is slow af 
-
-        mv = None
+            new_layer.setPixelData(new_shm.buf.tobytes(), 0, 0, image["size"][0],image["size"][1])
+            print("time: ",time.time() - t)
+            # document.refreshProjection() #Probably is pretty slow
+            refresh_document(document)
+            print("time: ",time.time() - t)
+            
 
 def change_memory(conn_manager: ConnectionManager):
+    print("change memory",conn_manager.linked_document)
     doc = Krita.instance().activeDocument()
     size = [doc.width(), doc.height()]
     depth = int(doc.colorDepth()[1:]) // 2
@@ -237,7 +274,9 @@ def change_memory(conn_manager: ConnectionManager):
     elif not active_image or active_image['size'] != size:
         asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
 
-    ConnectionManager.linked_document = doc
+    if(conn_manager.linked_document == None): return
+    print(conn_manager.linked_document)
+    # ConnectionManager.linked_document = doc
 
     print(
         size,

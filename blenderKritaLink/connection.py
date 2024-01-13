@@ -7,7 +7,7 @@ from .image_manager import ImageManager
 from .uv_extractor import getUvData
 from pprint import pprint
 from contextlib import contextmanager
-
+import time
 @contextmanager
 def shared_memory_context(name:str,size:int,destroy:bool,create=bool):
     shm = None
@@ -170,6 +170,7 @@ class KritaConnection():
                                         "data": "",
                                         "requestId": msg['requestId']
                                     })
+                                    
                                 case "RECREATE_MEMORY":
                                     conn.send({
                                         "type": "RECREATE_MEMORY",
@@ -204,19 +205,86 @@ class KritaConnection():
                                     })
                                 
                                 case "IMAGE_TO_LAYER":
+
+                                    start_time = time.time()
                                     print("OMG krita requests blender image")
                                     # print(bpy.context.scene,bpy.context.view_layer,bpy.context.view_layer.objects.active)
                                     pprint(msg["data"])
+                                    print("Czas: ",time.time()-start_time)
                                     # pprint(data,data["imageName"],data["depth"])
-                                    d = ImageManager.INSTANCE.get_image_to_krita(msg["data"]["image"],msg["data"]["depth"])
+                                    # d = ImageManager.INSTANCE.get_image_to_krita(msg["data"]["image"],msg["data"]["depth"])
+                                    d = ImageManager.INSTANCE.get_image_from_name(msg["data"]["image"]['name'])
                                     print("siema z powodzeniem pobrano rzeczy")
+                                    if(d == None):
+                                        return
+                                    
                                     depth = d.depth
                                     l = len(d.pixels)
-                                    with shared_memory_context( name='blender-krita', size= l * 4,destroy=False,create=True) as new_shm:                                        
-                                        array = np.frombuffer(new_shm.buf,np.float32)
-                                        d.pixels.foreach_get(array)
-                                        
-                                        print("siema z powodzeniem wpisano w pamiec rzeczy")
+                                    bdepth = 4
+                                    if msg["data"]["depth"] == "F32":
+                                        bdepth = 4
+                                    elif msg["data"]["depth"] == "F16":
+                                        bdepth = 2
+                                    elif msg["data"]["depth"] == "U16":
+                                        bdepth = 2
+                                    elif msg["data"]["depth"] == "U8":
+                                        bdepth = 1
+                                    print("depth: ", bdepth, "len", l)
+                                    np_arr  = np.zeros(l,dtype=np.float32)
+                                    print("Czas: ",time.time()-start_time)
+                                    d.pixels.foreach_get(np_arr)
+                                    # np_arr = np.array(px_arr)
+                                    print("Czas: ",time.time()-start_time)
+                                    if msg["data"]["depth"][0] == 'U':
+                                        np_arr = np.rint(np.multiply(np_arr,pow(255,bdepth)))
+                                    print("Czas: ",time.time()-start_time)
+                                    with shared_memory_context( name='blender-krita', size= l * bdepth,destroy=False,create=True) as new_shm: 
+                                        arr = None
+                                        print("mem created")
+                                        t = None
+                                        print("Czas: ",time.time()-start_time)
+                                        match msg["data"]["depth"]:
+                                            case "F32": t = np.float32 # 'f'
+                                            case "F16": t = np.float16 # 'e'
+                                            case "U16": 
+                                                t = np.uint16 # 'H'
+                                                np_arr = np_arr.astype(t)
+                                                np_arr = np_arr.reshape(d.size[0] * d.size[1],4)
+                                                np_arr[:, [2, 0]] = np_arr[:, [0, 2]]
+                                                np_arr = np_arr.flatten()
+                                            case "U8": 
+                                                t = np.uint8 # 'B'
+                                                np_arr = np_arr.astype(t)
+                                                np_arr = np_arr.reshape(d.size[0] * d.size[1],4)
+                                                np_arr[:, [2, 0]] = np_arr[:, [0, 2]]
+                                                np_arr = np_arr.flatten()
+
+                                            case _: t = np.float32
+                                        print("Czas: ",time.time()-start_time)
+                                        np_arr = np_arr.reshape((d.size[0],d.size[1],4))
+                                        np_arr = np.flipud(np_arr).flatten()
+                                        arr = np.frombuffer(new_shm.buf,t,l)
+                                        np.copyto(arr,np_arr)
+                                        arr = None
+                                        print("Czas: ",time.time()-start_time)
+                                        # np.copy()                                        
+                                        # if msg["data"]["depth"] == "F32":
+                                        #     array = np.frombuffer(new_shm.buf,np.float32)
+                                        # elif msg["data"]["depth"] == "F16":
+                                        #     array = np.frombuffer(new_shm.buf,np.float16)
+                                        # elif msg["data"]["depth"] == "U16":
+                                        #     array = np.frombuffer(new_shm.buf,np.uint16)
+                                        # elif msg["data"]["depth"] == "U8":
+                                        #     array = np.frombuffer(new_shm.buf,np.uint8)
+                                        # else: return
+
+                                        # print("arr created")
+                                        # try:
+                                        #     d.pixels.foreach_get(arr)
+                                        # except Exception as e:
+                                        #     print(e)
+                                        # print("bytes set in array")
+
                                         conn.send({
                                             "type": "IMAGE_TO_LAYER",
                                             "data":"",
@@ -224,9 +292,9 @@ class KritaConnection():
                                             "imageData": "",
                                             "requestId": msg['requestId']
                                         })
-
-                                        array = None
-                                        new_shm.close()
+                                        
+                                        print("siema z powodzeniem wpisano w pamiec rzeczy")
+                                        # new_shm.close()
                                         
                                         print("siema z powodzeniem wyslano rzeczy")
 
