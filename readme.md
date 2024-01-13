@@ -2,6 +2,12 @@
 
 This plugin provides quick way to edit blender images in krita with no need for file reloads.
 
+### Features
+- linking blender texture with krita file
+- imorting blender texture as new layer
+- selecting selected UV faces(they must be selected in edit mode and in uv editor)(only with cpp plugin)
+
+
 ## Installation
 
 Plugin is divided into blender and krita parts
@@ -14,19 +20,22 @@ Put `blenderKritaLink` folder in `blender/version/scripts/addons/` folder
 
 Put `KritaBlenderLink` and `KritaBlenderDesktop.html` in `<kritainstallation>/pykrita/` folder
 
+
 ## Usage
 
 to enable plugin in krita enable it in krita preferences `Settings>Configure Krita>Python Plugin Manager` and restart krita, after that enable dock in `Settings>Docker>Blender Krita Link`
 
 to enable blender plugin enable it in `Edit>Preferences>Add-ons>Blender Krita Link`
 
-Krita plugin operates everything, click connect if blender or disconnect if you wanna finish your work.
+Krita plugin operates everything, click connect to connect to blender or disconnect if you wanna finish your session.
 
-At first you need to select an image to override, document should be of same size as blender image, also select correct color spectrum in `Image>Properties>Image Color Space` Model:RGB/Alpha **Depth: 32-bit float/channel** Profile:sRGB (others might also work if you also change color space in blender)
+The plugin will load the images from blender into a list you can Link image by **rightclicking it** and selecting `link image` or you can import the texture by clicking on `from blender to new layer`
 
-If Update on draw is set the image will update in blender if you release draw button on canvas, but you can also send data manually, using Send Data Button.
+For linking to be possible the document should be of same size as blender image, also select correct color spectrum in `Image>Properties>Image Color Space` Model:RGB/Alpha and Profile:sRGB (others might also work if you also change color space in blender)
 
-Refresh Images refreshes images data from blender
+If Send on draw is set the image will update in blender if you release draw button on canvas(and do ctrl+(Shift)+Z), but you can also send data manually, using Send Data Button.
+
+`Refresh Images` refreshes images data from blender
 
 ## UVselectAddition Installation
 
