@@ -78,16 +78,23 @@ class ImageManager:
             return None
         return bpy.data.images[self.IMAGE_NAME]
     
+    def get_image_from_name(self,name):
+        return bpy.data.images[name]
+    
+
+
     def get_image_to_krita(self, image, krita_format):
         image = bpy.data.images[image["name"]]
         print("dupa")
         if image == None: #TODO error handling
             return {}
-        print("dupa")
+        print("dupa ", krita_format)
         
-        if krita_format != "F32":
-            return
+        # if krita_format != "F32" and krita_format !="F16":
+        #     return
         print("dupa")
+
+
 
         d = [0.0] * len(image.pixels)
         print("dupa",len(d))
