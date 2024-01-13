@@ -90,5 +90,5 @@ class ImageItem(QWidget):
             print("link selected")
             self.on_override(self.image)
         elif action == openAct:
-            self.on_open()
+            self.on_open(self.image)
             print("from blender to krita selected")
