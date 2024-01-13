@@ -35,7 +35,7 @@ class BlenderKritaLink(DockWidget):
         self.connection = ConnectionManager()
         self.avc_connected = False
         ImageState.instance.onImageDataChange.connect(
-            lambda x: change_memory(self.connection) and print("image file changed")
+            lambda x: [change_memory(self.connection), print("image file changed")]
         )
         ImageState.instance.onPixelsChange.connect(
             lambda x: self.on_update_image() and print("drawed smh")
