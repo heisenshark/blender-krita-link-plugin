@@ -44,7 +44,8 @@ class BlenderKritaLink(DockWidget):
         self.setWindowTitle("Blender Krita Link")
         self.centralWidget = uic.loadUi( os.path.join(os.path.dirname(os.path.realpath(__file__)),"BlenderKritaLinkUI.ui" ))
         self.setWidget(self.centralWidget)
-
+        setting = Settings.getSetting("listenCanvas")
+        self.centralWidget.SendOnDrawCheckbox.setCheckState( 2 if Settings.getSetting("listenCanvas") else 0) 
         self.centralWidget.SendOnDrawCheckbox.stateChanged.connect(self.on_listen_change)
 
         self.centralWidget.ConnectButton.clicked.connect(self.connect_blender)
@@ -131,9 +132,9 @@ class BlenderKritaLink(DockWidget):
         Settings.setSetting("listenCanvas", checked == 2)
 
     def on_update_image(self):
+        print(Settings.getSetting("listenCanvas"))
         if not Settings.getSetting("listenCanvas"):
             return
-
         t = Timer(0.25, self.send_pixels)
         t.start()
 
