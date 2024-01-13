@@ -10,19 +10,21 @@ bl_info = {
 }
                 
 
+
 def register():
     bpy.utils.register_class(_PT_BlenderKritaLinkPanel)
+    connection_instance = KritaConnection()
+    print(dir(connection_instance))
+    connection_instance.start()
+    image_manager_instance = ImageManager()
 
 def unregister():
+    KritaConnection.LINK_INSTANCE.dell()
     connection_instance = None
     image_manager_instance = None
     bpy.utils.unregister_class(_PT_BlenderKritaLinkPanel)
-    del bpy.types.Scene.test_prop
+
+    # del bpy.types.Scene.test_prop
 
 if __name__ == "__main__":
     register()
-
-connection_instance = KritaConnection()
-print(dir(connection_instance))
-connection_instance.start()
-image_manager_instance = ImageManager()
