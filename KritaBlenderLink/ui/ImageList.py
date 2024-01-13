@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import pyqtSignal, QSize
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from .ImageItem import ImageItem
-from KritaBlenderLink.connection import ConnectionManager, MessageListener, override_image
+from KritaBlenderLink.connection import ConnectionManager, MessageListener, override_image, blender_image_as_new_layer
 
 class ImageList(QListWidget):
     image_list = []
@@ -39,8 +39,7 @@ class ImageList(QListWidget):
         print("items to be removed", len(images_list))
         for image in images_list:
             listItem = QListWidgetItem(self)
-            item = ImageItem(image=image, on_open=lambda: asyncio.run(self.conn_manager.request(
-                {"data": "", "type": "OPEN"})), on_override=lambda image: override_image(image, self.conn_manager), parent=self.scrollAreaWidgetContents)
+            item = ImageItem(image=image, on_open=lambda image: blender_image_as_new_layer(image,self.conn_manager) , on_override= lambda image: override_image(image, self.conn_manager), parent=self.scrollAreaWidgetContents)
             listItem.setSizeHint(item.sizeHint())
             self.addItem(listItem)
             self.setItemWidget(listItem,item)
