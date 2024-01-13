@@ -212,7 +212,7 @@ def override_image(image, conn_manager):
     asyncio.run(conn_manager.request({"data": image, "type": "OVERRIDE_IMAGE"}))
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
 
-def refresh_document(doc):
+def refresh_document(doc): # TODO: duplicated code, move somewhere else 
     root_node = doc.rootNode()
     if root_node and len(root_node.childNodes()) > 0:
         test_layer = doc.createNode("DELME", "paintLayer")
@@ -225,8 +225,6 @@ def blender_image_as_new_layer(image_object, conn_manager):
     depth = Krita.instance().activeDocument().colorDepth()
     images = asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))['data']
     data = asyncio.run(conn_manager.request({"data": {"image":image_object,"depth":depth}, "type": "IMAGE_TO_LAYER"}))
-    t = time.time()
-    print("time: ",time.time() - t)
     pixel_size = 0
     match depth:
         case "F32": 
@@ -239,7 +237,6 @@ def blender_image_as_new_layer(image_object, conn_manager):
             pixel_size = 1
 
     with shared_memory_context(name='blender-krita',destroy=True, size=image_object["size"][0]*image_object["size"][1]*pixel_size,create=False) as new_shm:
-        print("time: ",time.time() - t)
         image = None
         pprint(images)
         
@@ -248,19 +245,13 @@ def blender_image_as_new_layer(image_object, conn_manager):
                 image = i
         if not image: 
             return
-        print("time: ",time.time() - t)
         krita_instance = Krita.instance()
         document = krita_instance.activeDocument()
-        print("time: ",time.time() - t)
         if document:
-            print("time: ",time.time() - t)
             new_layer = document.createNode(image['name'] + "__from_blender", "paintLayer")
             document.rootNode().addChildNode(new_layer, None)
             new_layer.setPixelData(new_shm.buf.tobytes(), 0, 0, image["size"][0],image["size"][1])
-            print("time: ",time.time() - t)
-            # document.refreshProjection() #Probably is pretty slow
             refresh_document(document)
-            print("time: ",time.time() - t)
             
 
 def change_memory(conn_manager: ConnectionManager):
@@ -276,7 +267,6 @@ def change_memory(conn_manager: ConnectionManager):
 
     if(conn_manager.linked_document == None): return
     print(conn_manager.linked_document)
-    # ConnectionManager.linked_document = doc
 
     print(
         size,
