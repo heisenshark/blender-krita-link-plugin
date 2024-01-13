@@ -1,30 +1,54 @@
 # Blender Krita Link
 
-This is a plugin for quick editting images in krita to use them as textures in blender, you can select krita document and set it to autoupdate one image in blender.
-This plugin is highly experimental and you need to know how to use it
+This plugin provides quick way to edit blender images in krita with no need for file reloads.
+
+### Features
+- linking blender texture with krita file
+- imorting blender texture as new layer
+- selecting selected UV faces(they must be selected in edit mode and in uv editor)(only with cpp plugin)
+
 
 ## Installation
 
 Plugin is divided into blender and krita parts
 
-Put blenderKritaLink folder in `blender/version/scripts/addons/` folder
+### Blender Part
 
-Put KritaBlenderLink in `<kritainstallation>/pykrita/` folder
+Put `blenderKritaLink` folder in `blender/version/scripts/addons/` folder
+
+### Krita Part
+
+Put `KritaBlenderLink` and `KritaBlenderDesktop.html` in `<kritainstallation>/pykrita/` folder
+
 
 ## Usage
 
-to enable krita plugin enable it in krita preferences `Settings>Configure Krita>Python Plugin Manager` and restart krita, enable dock in `Settings>Docker>Blender Krita Link`
+to enable plugin in krita enable it in krita preferences `Settings>Configure Krita>Python Plugin Manager` and restart krita, after that enable dock in `Settings>Docker>Blender Krita Link`
 
 to enable blender plugin enable it in `Edit>Preferences>Add-ons>Blender Krita Link`
 
-Blender Part is basically just a listener.
+Krita plugin operates everything, click connect to connect to blender or disconnect if you wanna finish your session.
 
-Krita plugin operates everything, click connect if blender or disconnect if you wanna finish your work.
+The plugin will load the images from blender into a list you can Link image by **rightclicking it** and selecting `link image` or you can import the texture by clicking on `from blender to new layer`
 
-At first you need to select an image to override, you need a document of same size to do it tho, also select correct color spectrum in `Image>Properties>Image Color Space` Model:RGB/Alpha **Depth: 32-bit float/channel** Profile:sRGB (others might work better if you also change color space in blender)
+For linking to be possible the document should be of same size as blender image, also select correct color spectrum in `Image>Properties>Image Color Space` Model:RGB/Alpha and Profile:sRGB (others might also work if you also change color space in blender)
 
-If Update on draw is set the image will update in blender if you release draw button on canvas, but you can also send data manually, using Send Data Button.
+If Send on draw is set the image will update in blender if you release draw button on canvas(and do ctrl+(Shift)+Z), but you can also send data manually, using Send Data Button.
 
-Refresh Images refreshes images data from blender
+`Refresh Images` refreshes images data from blender
+
+## UVselectAddition Installation
+
+The UV selection command kinda works(in many cases but requires uvs of your selected object to not look like nightmare) but for it to work you need to install UVselectAddition somehow for a simple and maybe useful feature of creating krita selection area from uv map 
+
+But you need to compile it first to do it
+- you need to compile krita from source, thankfully there are guides [compile the krita](https://docs.krita.org/en/untranslatable_pages/building_krita.html) or if you are having problems(very probable) [compile the krita using docker](https://docs.krita.org/en/untranslatable_pages/building/build_krita_with_docker_on_linux.html)
+- put the `uv-select` inside the  `krita>plugins` directory and 
+- create appImage according to tutorials
+- extract libraries(and action files) to your krita installation according to this [excellent repo](https://github.com/Acly/krita-ai-tools) and its releases
+
+I haven't built it on windows yet so good luck with trying it on this platform.
+
+Of course UvSelectionAddition is not required for python plugin to work
 
 # Plugin is highly experimental and there **WILL** be bugs so be aware and if you wanna help this plugin grow contact me, make pull requests or smh

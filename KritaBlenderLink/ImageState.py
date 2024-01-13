@@ -25,7 +25,6 @@ class ImageState(QObject):
         appNotifier.imageCreated.connect(lambda x: self.set_data(self.get_data()))
         self.onPixelsChange.connect(lambda x:print("pixels changed"))
         self.onImageDataChange.connect(lambda x:print("imagedata changed"))
-        # self.check_color_profile()
 
     def get_data(self):
         data = {}

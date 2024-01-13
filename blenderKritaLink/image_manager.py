@@ -1,21 +1,19 @@
 import bpy
 import numpy as np
-
-
+from pprint import pprint
 class ImageManager:
     INSTANCE = None
 
     def __init__(self) -> None:
-        if ImageManager.INSTANCE:
-            return
-        self.IMAGE = None
-        ImageManager.INSTANCE = self
-
+        if not ImageManager.INSTANCE:
+            self.IMAGE_NAME = None
+            ImageManager.INSTANCE = self
+    
     def mirror_image(self, image_pixels):
         print("hello from mirror_image")
         image = self.get_image()
         if not image or "IMAGE UV_TEST".find(image.type) == -1:
-            print("object is not image. ", self.IMAGE, "  type:", image.type)
+            print("object is not image. ", self.IMAGE_NAME, "  type:", image.type)
             return
         print("hello from mirror_image")
         width = image.size[0]
@@ -29,6 +27,7 @@ class ImageManager:
         )
 
         image_pixels = image_pixels.reshape(width * height,4)
+
         if isinstance(image_pixels[0][0], np.uint16) or isinstance(
             image_pixels[0][0], np.uint8
         ):
@@ -75,12 +74,43 @@ class ImageManager:
             obj.update_tag()
 
     def get_image(self):
-        if not self.IMAGE:
+        if not self.IMAGE_NAME:
             return None
-        return bpy.data.images[self.IMAGE]
+        return bpy.data.images[self.IMAGE_NAME]
+    
+    def get_image_from_name(self,name):
+        return bpy.data.images[name]
+    
+
+
+    def get_image_to_krita(self, image, krita_format):
+        image = bpy.data.images[image["name"]]
+        print("dupa")
+        if image == None: #TODO error handling
+            return {}
+        print("dupa ", krita_format)
+        
+        # if krita_format != "F32" and krita_format !="F16":
+        #     return
+        print("dupa")
+
+
+
+        d = [0.0] * len(image.pixels)
+        print("dupa",len(d))
+        image.pixels.foreach_get(d)
+        print("dupa")
+        pprint(d[0:10])
+        return image
+        # depth = image_data.depth
+        # channels = image_data.channels
+
+        # krita_format = 8
+        # pixels_array = np.array()
+
 
     def set_image_name(self, name: str | None):
-        self.IMAGE = name
+        self.IMAGE_NAME = name
 
     def get_image_size(self):
         image = self.get_image()

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ActionCollection version="2" name="Menu">
+  <Actions category="Edit">
+    <text>Select Shapes From Data</text>
+    <Action name="select_shapes">
+      <icon></icon>
+      <text>Select Shapes From action data</text>
+      <whatsThis></whatsThis>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+  </Actions>
+</ActionCollection>
