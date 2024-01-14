@@ -224,7 +224,6 @@ def blender_image_as_new_layer(image_object, conn_manager):
     
     depth = Krita.instance().activeDocument().colorDepth()
     images = asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))['data']
-    data = asyncio.run(conn_manager.request({"data": {"image":image_object,"depth":depth}, "type": "IMAGE_TO_LAYER"}))
     pixel_size = 0
     match depth:
         case "F32": 
@@ -235,16 +234,17 @@ def blender_image_as_new_layer(image_object, conn_manager):
             pixel_size = 2
         case "U8": 
             pixel_size = 1
-
-    with shared_memory_context(name='blender-krita',destroy=True, size=image_object["size"][0]*image_object["size"][1]*pixel_size,create=False) as new_shm:
-        image = None
+    image = None
+    for i in images:
+        if i['name'] == image_object['name']:
+            image = i
+    if not image:
+        return
+    print(image_object["size"][0],image_object["size"][1],pixel_size, image_object["size"][0]*image_object["size"][1]*pixel_size*4)
+    with shared_memory_context(name='blender-krita',destroy=True, size=image_object["size"][0]*image_object["size"][1]*pixel_size*4,create=True) as new_shm:
+        data = asyncio.run(conn_manager.request({"data": {"image":image_object,"depth":depth}, "type": "IMAGE_TO_LAYER"}))
         pprint(images)
         
-        for i in images:
-            if i['name'] == image_object['name']:
-                image = i
-        if not image: 
-            return
         krita_instance = Krita.instance()
         document = krita_instance.activeDocument()
         if document:
