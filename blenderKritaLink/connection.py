@@ -226,13 +226,15 @@ class KritaConnection():
                                         bdepth = 2
                                     elif msg["data"]["depth"] == "U8":
                                         bdepth = 1
+                                    
                                     print("depth: ", bdepth, "len", l)
                                     np_arr  = np.zeros(l,dtype=np.float32)
                                     d.pixels.foreach_get(np_arr)
                                     # np_arr = np.array(px_arr)
                                     if msg["data"]["depth"][0] == 'U':
                                         np_arr = np.rint(np.multiply(np_arr,pow(255,bdepth)))
-                                    with shared_memory_context( name='blender-krita', size= l * bdepth,destroy=False,create=True) as new_shm: 
+                                    print(l, bdepth, l * bdepth, d.size[0],d.size[1] * bdepth* d.size[0])
+                                    with shared_memory_context( name='blender-krita', size= l * bdepth,destroy=False,create=False) as new_shm:
                                         arr = None
                                         print("mem created")
                                         t = None
