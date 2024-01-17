@@ -11,8 +11,14 @@ from PyQt5.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
     QLayout,
-    QDockWidget
+    QDockWidget,
+    QColorDialog
 )
+from PyQt5.QtCore import (
+    QObject,
+    QEvent
+)
+from PyQt5.QtGui import QColor 
 from threading import Timer, Thread
 import asyncio
 from .connection import ConnectionManager, MessageListener, change_memory, format_message
@@ -24,6 +30,18 @@ import os as os
 
 DOCKER_TITLE = "Blender Krita Link"
 
+
+class ClickFilter(QObject):
+    def __init__(self, function):
+        super().__init__()
+        self.function = function
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.MouseButtonPress:
+            if self.function:  # Sprawdź, czy funkcja została przekazana
+                self.function()  # Wywołaj funkcję
+            return True  # Zatrzymaj propagację zdarzenia
+        return super().eventFilter(obj, event)
 
 class BlenderKritaLink(DockWidget):
     listen_to_canvas_change = True
@@ -61,8 +79,30 @@ class BlenderKritaLink(DockWidget):
         self.centralWidget = uic.loadUi( os.path.join(os.path.dirname(os.path.realpath(__file__)),"BlenderKritaLinkUI.ui" ))
         self.setWidget(self.centralWidget)
         setting = Settings.getSetting("listenCanvas")
+
         self.centralWidget.SendOnDrawCheckbox.setCheckState( 2 if Settings.getSetting("listenCanvas") else 0) 
         self.centralWidget.SendOnDrawCheckbox.stateChanged.connect(self.on_listen_change)
+
+
+        def on_uv_show(state):
+            print("uvshow changed", state)
+            Settings.setSetting("showUVs", state == 2)
+            if UvOverlay.INSTANCE is not None:
+                UvOverlay.INSTANCE.update()
+        self.centralWidget.ShowUVCheckbox.setCheckState(2 if Settings.getSetting("showUVs") else 0 )
+        self.centralWidget.ShowUVCheckbox.stateChanged.connect(on_uv_show)
+
+        def openColorDialog():
+            color = QColorDialog.getColor(initial=QColor(Settings.getSetting("uvColor")),options=QColorDialog.ColorDialogOption.ShowAlphaChannel)
+            UvOverlay.COLOR = color
+            self.centralWidget.UVColorButton.setStyleSheet(f"background-color: {color.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;")
+            Settings.setSetting("uvColor",color.name(QColor.NameFormat.HexArgb))
+
+        self.filter = ClickFilter(openColorDialog)
+        c = QColor(Settings.getSetting("uvColor"))
+        self.centralWidget.UVColorButton.setStyleSheet(f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;")
+        # self.centralWidget.UVColorButton.clicked.connect(openColorDialog)
+        self.centralWidget.UVColorButton.installEventFilter(self.filter)
 
         self.centralWidget.ConnectButton.clicked.connect(self.connect_blender)
         self.centralWidget.DisconnectButton.clicked.connect(self.connection.disconnect)

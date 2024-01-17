@@ -57,11 +57,36 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="showUVCheckbox">
-     <property name="text">
-      <string>CheckBox</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QCheckBox" name="ShowUVCheckbox">
+       <property name="text">
+        <string>Show UVs</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QWidget" name="UVColorButton" native="true">
+         <property name="styleSheet">
+          <string notr="true">background-color: rgb(255,255,255);
+border: 3px solid #8f8f91;
+
+</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="UVsColor">
+         <property name="text">
+          <string>Uvs Color</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QFrame" name="ImagesFrame">
@@ -105,6 +130,9 @@
       <property name="bottomMargin">
        <number>0</number>
       </property>
+      <item>
+       <widget class="QWidget" name="widget" native="true"/>
+      </item>
      </layout>
     </widget>
    </item>
