@@ -1,4 +1,5 @@
-from krita import Krita, DockWidget, QOpenGLWidget, QtCore
+from KritaBlenderLink.uvs_viewer import UvOverlay
+from krita import Krita, DockWidget, QOpenGLWidget, QtCore, Notifier
 from PyQt5.QtWidgets import (
     QPushButton,
     QLabel,
@@ -14,7 +15,7 @@ from PyQt5.QtWidgets import (
 )
 from threading import Timer, Thread
 import asyncio
-from .connection import ConnectionManager, MessageListener, change_memory
+from .connection import ConnectionManager, MessageListener, change_memory, format_message
 from .ui.ImageList import ImageList
 from .settings import Settings
 from .ImageState import ImageState
@@ -31,6 +32,7 @@ class BlenderKritaLink(DockWidget):
 
     def __init__(self):
         super().__init__()
+
         print(Settings.getSetting("listenCanvas"))
         self.connection = ConnectionManager()
         self.avc_connected = False
@@ -40,6 +42,20 @@ class BlenderKritaLink(DockWidget):
         ImageState.instance.onPixelsChange.connect(
             lambda x: self.on_update_image() and print("drawed smh")
         )
+        appNotifier:Notifier = Krita.instance().notifier()
+
+        appNotifier.imageClosed.connect(lambda:print("image Closed"))
+        appNotifier.imageCreated.connect(lambda:print("image Created"))
+        def xd():
+            print(Krita.instance().views(),len(Krita.instance().views()))
+            if len(Krita.instance().views()) <= 1:
+                UvOverlay.INSTANCE = None
+        
+        appNotifier.viewClosed.connect(lambda:xd())
+        appNotifier.viewCreated.connect(lambda:print("view Created"))
+        appNotifier.windowCreated.connect(lambda:print("window Created"))
+        appNotifier.applicationClosing.connect(lambda:print("app closing"))
+
 
         self.setWindowTitle("Blender Krita Link")
         self.centralWidget = uic.loadUi( os.path.join(os.path.dirname(os.path.realpath(__file__)),"BlenderKritaLinkUI.ui" ))
@@ -54,15 +70,18 @@ class BlenderKritaLink(DockWidget):
         self.centralWidget.RefreshImagesButton.clicked.connect(self.get_image_data)
         self.centralWidget.ImageTosRGBButton.clicked.connect(self.image_to_srgb)
         self.centralWidget.SelectUVIslandsButton.clicked.connect(self.select_uvs)
+        self.centralWidget.UVOverlayButton.clicked.connect(self.get_uv_overlay)
 
         ImageList(parent=self.centralWidget.ImagesFrame, con_manager=self.connection)
         self.centralWidget.ImagesFrame.layout().addWidget(ImageList.instance)
-
+        
+        appNotifier.imageCreated.connect(self.attach_uv_viewer)
 
         print(self.centralWidget, self.centralWidget.ConnectButton) 
         print(os.path.join(os.path.dirname(os.path.realpath(__file__)),"BlenderKritaLinkUI.ui" ))
 
         MessageListener("SELECT_UVS",lambda m: self.handle_uv_response(m))
+        MessageListener("GET_UV_OVERLAY",lambda m: self.handle_uv_overlay(m))
 
     def connect_blender(self):
         doc = Krita.instance().activeDocument()
@@ -89,6 +108,7 @@ class BlenderKritaLink(DockWidget):
         Thread(target=self.get_image_data).start()
 
     def get_image_data(self):
+        if self.connection.connection == None:return
         images = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
         ImageList.instance.refresh_signal.emit(images["data"])
 
@@ -144,25 +164,46 @@ class BlenderKritaLink(DockWidget):
     def active_view_changed(self):
         print("active view changed")
         self.get_image_data()
+        self.attach_uv_viewer()
+
+    def attach_uv_viewer(self):
+        active_window = Application.activeWindow()
+        active_view = active_window.activeView()
+
+        if active_view.document() is None:
+            raise RuntimeError('Document of active view is None!')
+        my_overlay = UvOverlay(active_view)
+        self.movrl = my_overlay
+        my_overlay.show()
+
 
     def image_to_srgb(self):
         Krita.instance().action("image_properties").trigger()
 
     def select_uvs(self):
         uvs = asyncio.run(self.connection.request({"type": "SELECT_UVS"}))
-        print(uvs)
+        print(format_message(uvs))
+
+    def get_uv_overlay(self):
+        asyncio.run(self.connection.request({"type": "GET_UV_OVERLAY"}))
 
     def handle_uv_response(self, message):
-        print("handle uvs triggered", message)
+        # print("handle uvs triggered", message)
         action = Krita.instance().action("select_shapes")
         width_height = [Krita.instance().activeDocument().width(),Krita.instance().activeDocument().height()]
-        groups = message['data']
+        faces = message['data']
+        # UvOverlay.set_polygons(faces)
+
         if action != None:
             print("action exists")
-            for g in groups:
+            for g in faces:
                 for f in g:
                     f[0] *= width_height[0]
                     f[1] *= width_height[1]
-            action.setData(groups)
+            action.setData(faces)
             action.trigger()
             action.setData([])
+
+    def handle_uv_overlay(self, message):
+        print("handle_uv_overlay")
+        UvOverlay.set_polygons(message['data'])
