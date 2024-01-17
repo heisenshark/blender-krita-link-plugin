@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
+from .settings import Settings
 
 def ruler_correction():
     qwin = Krita.instance().activeWindow().qwindow()
@@ -75,12 +76,13 @@ class UvOverlay(QWidget):
     __tris = []
     ACTIVE_VIEW = None
     INSTANCE = None
+    COLOR = QColor(0,0,0,255)
     destroyAll = pyqtSignal()
 
     def __init__(self, view):
         parent = get_q_view(view)
         super().__init__(parent)
-
+        UvOverlay.COLOR = QColor(Settings.getSetting("uvColor") or "#000000FF")
         self.destroyAll.emit()
         if UvOverlay.INSTANCE != None and not UvOverlay.INSTANCE.destroyed:
             UvOverlay.INSTANCE.deleteLater()
@@ -120,6 +122,9 @@ class UvOverlay(QWidget):
         view = UvOverlay.ACTIVE_VIEW
         canvas = view.canvas()
         painter = QPainter(self)
+        show_uv= Settings.getSetting("showUVs")
+        if not show_uv:
+            return
         try:
             painter.setRenderHint(QPainter.Antialiasing, False)
             painter.translate(self.rect().center())
@@ -129,7 +134,7 @@ class UvOverlay(QWidget):
             document = view.document()
             zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
 
-            painter.setPen(QPen(QColor(0,0,0,100), 0.5/zoom, Qt.SolidLine))
+            painter.setPen(QPen(UvOverlay.COLOR, 0.5/zoom, Qt.SolidLine))
             for p in UvOverlay.__tris:
                 painter.drawPolygon(p)
 
