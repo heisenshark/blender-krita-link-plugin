@@ -194,15 +194,27 @@ class KritaConnection():
 
                                 case "SELECT_UVS":
                                     print("sending UV data: ")
-                                    print(bpy.context.scene,bpy.context.view_layer,bpy.context.view_layer.objects.active)
+                                    # print(bpy.context.scene,bpy.context.view_layer,bpy.context.view_layer.objects.active)
                                     print("sending UV data2 ")
                                     data = getUvData()
                                     conn.send({
                                         "type": "SELECT_UVS",
                                         "data": data,
+                                        "noshow": True,
                                         "requestId": msg['requestId']
                                     })
                                 
+                                case "GET_UV_OVERLAY":
+                                    print("getting uv overlay")
+                                    data = getUvData()
+                                    conn.send({
+                                        "type": "GET_UV_OVERLAY",
+                                        "data": data,
+                                        "noshow": True,
+                                        "requestId": msg['requestId']
+                                    })
+
+
                                 case "IMAGE_TO_LAYER":
 
                                     print("OMG krita requests blender image")

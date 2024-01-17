@@ -88,7 +88,7 @@ class ConnectionManager:
                     try:
                         message = self.connection.recv()
                         if("imageData" not in message):
-                            print("recived message", message)
+                            print("recived message", format_message(message)) 
                         self.emit_message(message)
                     except Exception as e:
                         print("Error on reciving messages", e)
@@ -117,7 +117,7 @@ class ConnectionManager:
 
     def emit_message(self, message):
         if isinstance(message, object) and "type" in message and "data" in message:
-            print(ConnectionManager.listeners, print(message))
+            print(ConnectionManager.listeners, format_message(message))
             event_type = message["type"]
             for listener in ConnectionManager.listeners:
                 if listener.event_type == event_type:
@@ -279,3 +279,13 @@ def change_memory(conn_manager: ConnectionManager):
     conn_manager.resize_memory(size[0] * size[1] * depth)
     asyncio.run(conn_manager.request({"data": active_image, "type": "OVERRIDE_IMAGE"}))
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
+
+def get_uv_overlay(conn_manager: ConnectionManager):
+    pass
+
+def format_message(message):
+    if hasattr(message,'noshow') or "noshow" in message:
+        return {"type":message['type'], "requestId":message['requestId'],"formattedMessage":True}
+    else: 
+        message["formattedMessage"] = True
+        return message

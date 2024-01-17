@@ -1762,7 +1762,7 @@ def getUvData():
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
-    pprint(bm.faces)
+    # pprint(bm.faces)
     data = get_island_info_from_bmesh(bm,True)
 
     list = []    
@@ -1770,18 +1770,18 @@ def getUvData():
         
     for d in data:
         fcs = d['faces']
-        pprint(fcs)
+        # pprint(fcs)
         for f in fcs:
             valid = True
             loops = []
-            print(uv_layer,selected_object.data.uv_layers.active.data,)
+            # print(uv_layer,selected_object.data.uv_layers.active.data,)
             for u in f['face'].loops:                
                 if not u[uv_lay].select : 
                     valid = False
                 else:
-                    print(u.index)
+                    # print(u.index)
                     loop = [u[uv_lay].uv[0],1-u[uv_lay].uv[1]]
                     loops.append(loop)
             if valid: list.append(loops)
-    pprint(list)
+    # pprint(list)
     return list

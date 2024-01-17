@@ -29,7 +29,7 @@ class ImageList(QListWidget):
 
         self.refresh_signal.connect(self.update_images_list)
         self.clear_signal.connect(self.clear_images_list)
-
+        
         MessageListener(
             "GET_IMAGES", lambda message: ImageList.instance.refresh_signal.emit(message['data']))
 
