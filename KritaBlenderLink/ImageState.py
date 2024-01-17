@@ -14,6 +14,8 @@ class ImageState(QObject):
     onSRGBColorSpace = pyqtSignal(bool)
     instance = None
 
+
+
     def __init__(self) -> None:
         print("init state....")
         super().__init__()
@@ -87,10 +89,11 @@ class ImageState(QObject):
 
     def eventFilter(self, obj, event):
         if isinstance(obj, QOpenGLWidget):
-            if event.type() == 3 and event.button() == 1:
+            if event.type() == 93 or (event.type() == 3 and event.button() == 1):
                 print(obj, type(obj).__bases__)
                 self.onPixelsChange.emit(self.data)
-                print("painted Something on", event.type(), event.button())
+                # print("painted Something on", event.type(), event.button())
+                print("painted Something on")
         return False
 
 ImageState()

@@ -1,3 +1,5 @@
+#code heavily inspired from https://krita-artists.org/t/canvas-render-how-to/31540
+
 from krita import *
 from PyQt5.QtCore import (
         Qt,
