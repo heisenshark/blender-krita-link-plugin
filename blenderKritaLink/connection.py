@@ -90,6 +90,8 @@ class KritaConnection():
                     pol = conn.poll(0.1)
                     if not pol: continue
                     msg = conn.recv()
+                    if conn.closed:
+                        break
                     self.update_message("message recived")
                     print(msg)
                     if msg == 'close':
@@ -317,7 +319,7 @@ class KritaConnection():
             except Exception as e:
                 pprint( e)
                 if KritaConnection.CONNECTION != None:
-                    KritaConnection.CONNECTION.send("close")
+                    # KritaConnection.CONNECTION.send("close")
                     KritaConnection.CONNECTION.close()
                 KritaConnection.CONNECTION = None
 

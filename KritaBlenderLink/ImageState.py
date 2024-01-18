@@ -30,11 +30,15 @@ class ImageState(QObject):
 
     def get_data(self):
         data = {}
-        data["colorProfile"] = Krita.instance().activeDocument().colorProfile()
-        data["colorModel"] = Krita.instance().activeDocument().colorModel()
-        data["colorDepth"] = Krita.instance().activeDocument().colorDepth()
-        data["size"] = [Krita.instance().activeDocument().width(),Krita.instance().activeDocument().height()]
-        return data
+        document = Krita.instance().activeDocument()
+        if document is None:
+            return data
+        else:
+            data["colorProfile"] = document.colorProfile()
+            data["colorModel"] = document.colorModel()
+            data["colorDepth"] = document.colorDepth()
+            data["size"] = [document.width(),document.height()]
+            return data
     
     def set_data(self,data):
         self.data = data
