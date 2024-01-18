@@ -17,6 +17,8 @@ from PyQt5.QtWidgets import (
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
 from .settings import Settings
+from threading import Timer
+from PyQt5 import sip
 
 def ruler_correction():
     qwin = Krita.instance().activeWindow().qwindow()
@@ -52,7 +54,6 @@ def get_q_view(view):
 
 
 def get_transform(view):
-
     def _offset(scroller):
         mid = (scroller.minimum() + scroller.maximum()) / 2.0
         return -(scroller.value() - mid)
@@ -60,7 +61,9 @@ def get_transform(view):
     canvas = view.canvas()
     document = view.document()
     q_view = get_q_view(view)
-    if q_view is None:return QTransform()
+    if q_view is None:
+        print("view is none")
+        return QTransform()
     area = q_view.findChild(QAbstractScrollArea)
     zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
     transform = QTransform()
@@ -71,8 +74,23 @@ def get_transform(view):
     transform.scale(zoom, zoom)
     return transform
         
+class VieportResizeListener(QtCore.QObject):
+    def __init__(self, function):
+        super().__init__()
+        self.function = function
+
+    def eventFilter(self, obj, e):
+        if e.type() == QEvent.Resize:
+            print("resize handle from canvas")
+            self.function()
+            # q_canvas = self.parent().findChild(QAbstractScrollArea).viewport()
+            # size = q_canvas.size()
+            # x, y = ruler_correction()
+            # self.setGeometry(x,y,q_canvas.geometry().width(),q_canvas.geometry().height())
+        return super().eventFilter(obj, e)
+
 class UvOverlay(QWidget):
-    instances_set = []
+    INSTANCES_SET = []
 
     _tris = []
     __tris = []
@@ -83,45 +101,66 @@ class UvOverlay(QWidget):
 
     def __init__(self, view):
         parent = get_q_view(view)
+        self.view = view
+        # self.moveToThread(parent.thread())
         super().__init__(parent)
+        
+        
         UvOverlay.COLOR = QColor(Settings.getSetting("uvColor") or "#000000FF")
-        self.destroyAll.emit()
-        if UvOverlay.INSTANCE != None and not UvOverlay.INSTANCE.destroyed:
-            UvOverlay.INSTANCE.deleteLater()
+        UvOverlay.INSTANCES_SET.append(self)
+        # self.destroyAll.emit()
+        self.setObjectName("UVOVERLAY")
+        # if UvOverlay.INSTANCE != None and not UvOverlay.INSTANCE.destroyed:
+        #     UvOverlay.INSTANCE.deleteLater()
         
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
         self.setFocusPolicy(Qt.NoFocus)
-        UvOverlay.ACTIVE_VIEW = view
+        # UvOverlay.ACTIVE_VIEW = view
         q_canvas = parent.findChild(QAbstractScrollArea).viewport()
-        size = q_canvas.size()
+        # size = q_canvas.size()
         
-        x, y = ruler_correction()
-        self.setGeometry(QRect(x, y, size.width(), size.height()))
+        # x, y = ruler_correction()
+        # self.setGeometry(x,y,q_canvas.geometry().width(),q_canvas.geometry().height())
+
+        self.ls = VieportResizeListener(self.resize_handle)
+        q_canvas.installEventFilter(self.ls)
         
         parent.installEventFilter(self)
-        document = UvOverlay.ACTIVE_VIEW.document()
+        self.update_stuff()
+        def saydupa():
+            print("dupa")
+        self.destroyed.connect(saydupa)
+        self._tris = []
+
+    def update_stuff(self):
+        print("update stuff")
+        active_window = Application.activeWindow()
+        active_view = active_window.activeView()
+        if active_view != self.view:
+            return
+        document = self.view.document()
         width = float(document.width())
         height = float(document.height())
-
-        self.__tris = []
+        print("doc", width, height)
+        self._tris = []
 
         for p in UvOverlay._tris:
             polygon = QPolygonF()
             for v in p:
                 polygon.append(QPointF((v[0]-0.5)*width,(v[1]-0.5)*height))
-            self.__tris.append(polygon)
+            self._tris.append(polygon)
             
-        UvOverlay.__tris = self.__tris
         Krita.instance().action("view_ruler").triggered.connect(self.resize_handle)
-        UvOverlay.INSTANCE = self
+        self.resize_handle()
+
 
     def updatePolygons(self, polygons):
-        self.__tris = polygons
+        self._tris = polygons
         self.update()
 
     def paintEvent(self, e):
-        document = UvOverlay.ACTIVE_VIEW.document()
-        view = UvOverlay.ACTIVE_VIEW
+        document = self.view.document()
+        view = self.view
         canvas = view.canvas()
         painter = QPainter(self)
         show_uv= Settings.getSetting("showUVs")
@@ -130,14 +169,14 @@ class UvOverlay(QWidget):
         try:
             painter.setRenderHint(QPainter.Antialiasing, False)
             painter.translate(self.rect().center())
-            painter.setTransform(get_transform(UvOverlay.ACTIVE_VIEW), combine=True)
+            painter.setTransform(get_transform(self.view), combine=True)
             painter.setPen(Qt.NoPen)
 
             document = view.document()
             zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
 
             painter.setPen(QPen(UvOverlay.COLOR, 0.5/zoom, Qt.SolidLine))
-            for p in UvOverlay.__tris:
+            for p in self._tris:
                 painter.drawPolygon(p)
 
         finally:
@@ -145,10 +184,11 @@ class UvOverlay(QWidget):
     
     def eventFilter(self, obj, e):
         if e.type() == QEvent.Resize:
-            q_canvas = self.parent().findChild(QAbstractScrollArea).viewport()
-            size = q_canvas.size()
-            x, y = ruler_correction()
-            self.setGeometry(QRect(x, y, size.width(), size.height()))
+            self.resize_handle()
+            # q_canvas = self.parent().findChild(QAbstractScrollArea).viewport()
+            # size = q_canvas.size()
+            # x, y = ruler_correction()
+            # self.setGeometry(x,y,q_canvas.geometry().width(),q_canvas.geometry().height())
         return super().eventFilter(obj, e)
     
     def resize_handle(self):
@@ -156,18 +196,22 @@ class UvOverlay(QWidget):
         q_canvas = self.parent().findChild(QAbstractScrollArea).viewport()
         size = q_canvas.size()
         x, y = ruler_correction()
-        self.setGeometry(QRect(x, y, size.width(), size.height()))
-
+        print(q_canvas.x(),q_canvas.y(),q_canvas.geometry().width(),q_canvas.geometry().height())
+        self.setGeometry(x,y,q_canvas.geometry().width(),q_canvas.geometry().height())
+        
     def set_polygons(polygons):
-        if UvOverlay.ACTIVE_VIEW is None or UvOverlay.ACTIVE_VIEW.document() is None:
-            return
-        document = UvOverlay.ACTIVE_VIEW.document()
+        # if UvOverlay.ACTIVE_VIEW is None or UvOverlay.ACTIVE_VIEW.document() is None:
+        #     return
+        active_window = Application.activeWindow()
+        active_view = active_window.activeView()
+
+        document = active_view.document()
 
         width = float(document.width())
         height = float(document.height())
-        instance = UvOverlay.INSTANCE
-        if instance == None:
-            return
+        # instance = UvOverlay.INSTANCE
+        # if instance == None:
+        #     return
 
         UvOverlay._tris = []
         for f in polygons:
@@ -184,5 +228,11 @@ class UvOverlay(QWidget):
             __tris.append(polygon)
         print(__tris[:5])
         UvOverlay.__tris = __tris
-        UvOverlay.INSTANCE.update()
+        print(UvOverlay.INSTANCES_SET)
+        for ov in UvOverlay.INSTANCES_SET:
+            if not sip.isdeleted(ov):
+                # UvOverlay.INSTANCE = overlay
+                # if ov.view == active_view: 
+                ov.update_stuff()
+                ov.update()
         print("UVs updated, len:",len(__tris))

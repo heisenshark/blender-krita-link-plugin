@@ -40,7 +40,7 @@ class ImageItem(QWidget):
 
         self.image_size = image["size"]
         if not (self.image_size[0] == width and self.image_size[1] == height):
-            print(image["size"], width, height)
+            # print(image["size"], width, height)
             self.label_9.setStyleSheet("color: red;")
 
         self.horizontalLayout_2.addWidget(self.label_9)

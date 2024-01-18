@@ -1,4 +1,4 @@
-from KritaBlenderLink.uvs_viewer import UvOverlay
+from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
 from krita import Krita, DockWidget, QOpenGLWidget, QtCore, Notifier
 from PyQt5.QtWidgets import (
     QPushButton,
@@ -27,6 +27,7 @@ from .settings import Settings
 from .ImageState import ImageState
 from PyQt5 import uic
 import os as os 
+from PyQt5 import sip
 
 DOCKER_TITLE = "Blender Krita Link"
 
@@ -87,8 +88,10 @@ class BlenderKritaLink(DockWidget):
         def on_uv_show(state):
             print("uvshow changed", state)
             Settings.setSetting("showUVs", state == 2)
-            if UvOverlay.INSTANCE is not None:
-                UvOverlay.INSTANCE.update()
+            for uo in UvOverlay.INSTANCES_SET:
+                if not sip.isdeleted(uo):
+                    uo.update()
+                
         self.centralWidget.ShowUVCheckbox.setCheckState(2 if Settings.getSetting("showUVs") else 0 )
         self.centralWidget.ShowUVCheckbox.stateChanged.connect(on_uv_show)
 
@@ -103,7 +106,7 @@ class BlenderKritaLink(DockWidget):
         self.centralWidget.UVColorButton.setStyleSheet(f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;")
         # self.centralWidget.UVColorButton.clicked.connect(openColorDialog)
         self.centralWidget.UVColorButton.installEventFilter(self.filter)
-
+        
         self.centralWidget.ConnectButton.clicked.connect(self.connect_blender)
         self.centralWidget.DisconnectButton.clicked.connect(self.connection.disconnect)
         self.centralWidget.SendDataButton.clicked.connect(self.send_pixels)
@@ -115,7 +118,7 @@ class BlenderKritaLink(DockWidget):
         ImageList(parent=self.centralWidget.ImagesFrame, con_manager=self.connection)
         self.centralWidget.ImagesFrame.layout().addWidget(ImageList.instance)
         
-        appNotifier.imageCreated.connect(self.attach_uv_viewer)
+        appNotifier.viewCreated.connect(self.attach_uv_viewer)
 
         print(self.centralWidget, self.centralWidget.ConnectButton) 
         print(os.path.join(os.path.dirname(os.path.realpath(__file__)),"BlenderKritaLinkUI.ui" ))
@@ -209,11 +212,22 @@ class BlenderKritaLink(DockWidget):
     def attach_uv_viewer(self):
         active_window = Application.activeWindow()
         active_view = active_window.activeView()
-
+        if(active_view.window() is None):
+            return
+        qv = get_q_view(active_view)
+        if qv is None:
+            return
+        print("active window: ",qv)
+        print(qv.findChild(UvOverlay))
+        overlay = qv.findChild(UvOverlay,"UVOVERLAY")
+        if overlay is not None:
+            for ov in UvOverlay.INSTANCES_SET:
+                if not sip.isdeleted(ov):
+                    ov.update_stuff()
+            return
         if active_view.document() is None:
             raise RuntimeError('Document of active view is None!')
         my_overlay = UvOverlay(active_view)
-        self.movrl = my_overlay
         my_overlay.show()
 
 
@@ -225,6 +239,7 @@ class BlenderKritaLink(DockWidget):
         print(format_message(uvs))
 
     def get_uv_overlay(self):
+        self.attach_uv_viewer()
         asyncio.run(self.connection.request({"type": "GET_UV_OVERLAY"}))
 
     def handle_uv_response(self, message):
@@ -233,7 +248,7 @@ class BlenderKritaLink(DockWidget):
         width_height = [Krita.instance().activeDocument().width(),Krita.instance().activeDocument().height()]
         faces = message['data']
         # UvOverlay.set_polygons(faces)
-
+        
         if action != None:
             print("action exists")
             for g in faces:

@@ -86,9 +86,17 @@ class ConnectionManager:
                 on_connect()
                 while True:
                     try:
+                        message_available = self.connection.poll(0.5)
+                        if not message_available:
+                            continue
+                        if self.connection.closed:
+                            break
                         message = self.connection.recv()
+                        if message == 'close':
+                            print("closing connection...")
+                            break
                         if("imageData" not in message):
-                            print("recived message", format_message(message)) 
+                            print("recived message", format_message(message))
                         self.emit_message(message)
                     except Exception as e:
                         print("Error on reciving messages", e)
@@ -97,8 +105,8 @@ class ConnectionManager:
                             # self.shm.close()
                             self.shm.unlink()
                             self.shm = None
-                        on_disconnect()
                         break
+                on_disconnect()
 
         t1 = Thread(target=thread)
         t1.start()
@@ -107,7 +115,7 @@ class ConnectionManager:
         if self.shm and check_shared_memory_exists("krita-blender"):
             self.shm.unlink()
         if self.connection:
-            self.connection.send("close")
+            # self.connection.send("close")
             self.connection.close()
             self.connection = None
             if self.on_disconnect:
