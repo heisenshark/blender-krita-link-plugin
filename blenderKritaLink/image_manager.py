@@ -81,34 +81,6 @@ class ImageManager:
     def get_image_from_name(self,name):
         return bpy.data.images[name]
     
-
-
-    def get_image_to_krita(self, image, krita_format):
-        image = bpy.data.images[image["name"]]
-        print("dupa")
-        if image == None: #TODO error handling
-            return {}
-        print("dupa ", krita_format)
-        
-        # if krita_format != "F32" and krita_format !="F16":
-        #     return
-        print("dupa")
-
-
-
-        d = [0.0] * len(image.pixels)
-        print("dupa",len(d))
-        image.pixels.foreach_get(d)
-        print("dupa")
-        pprint(d[0:10])
-        return image
-        # depth = image_data.depth
-        # channels = image_data.channels
-
-        # krita_format = 8
-        # pixels_array = np.array()
-
-
     def set_image_name(self, name: str | None):
         self.IMAGE_NAME = name
 

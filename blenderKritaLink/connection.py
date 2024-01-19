@@ -153,14 +153,6 @@ class KritaConnection():
                                     })
                                     print("message sent")
 
-                                case "OPEN":
-                                    print("dupaopen")
-                                    conn.send({
-                                        "type": "OPEN",
-                                        "data": "",
-                                        "requestId": msg['requestId']
-                                    })
-
                                 case "OVERRIDE_IMAGE":
                                     print("overriding image: ",
                                             msg['data']['name'])
@@ -220,10 +212,8 @@ class KritaConnection():
                                 case "IMAGE_TO_LAYER":
 
                                     print("OMG krita requests blender image")
-                                    # print(bpy.context.scene,bpy.context.view_layer,bpy.context.view_layer.objects.active)
                                     pprint(msg["data"])
-                                    # pprint(data,data["imageName"],data["depth"])
-                                    # d = ImageManager.INSTANCE.get_image_to_krita(msg["data"]["image"],msg["data"]["depth"])
+                                    
                                     d = ImageManager.INSTANCE.get_image_from_name(msg["data"]["image"]['name'])
                                     print("siema z powodzeniem pobrano rzeczy")
                                     if(d == None):

@@ -8,14 +8,15 @@ from pprint import pprint
 from contextlib import contextmanager
 import time
 
+
 @contextmanager
-def shared_memory_context(name:str,size:int,destroy:bool,create=bool):
+def shared_memory_context(name: str, size: int, destroy: bool, create=bool):
     shm = None
     if size == None:
-        shm = shared_memory.SharedMemory(name=name,create=create)
+        shm = shared_memory.SharedMemory(name=name, create=create)
     else:
-        shm = shared_memory.SharedMemory(name=name,create=create,size=size)
-    
+        shm = shared_memory.SharedMemory(name=name, create=create, size=size)
+
     try:
         yield shm
     finally:
@@ -24,10 +25,11 @@ def shared_memory_context(name:str,size:int,destroy:bool,create=bool):
         else:
             shm.close()
 
+
 def check_shared_memory_exists(name):
     try:
         shm = shared_memory.SharedMemory(name=name)
-        shm.close() 
+        shm.close()
         return True
     except FileNotFoundError:
         return False
@@ -60,7 +62,8 @@ class ConnectionManager:
     images = []
 
     def __init__(self) -> None:
-        MessageListener("GET_IMAGES", lambda message: self.set_images(message["data"]))
+        MessageListener(
+            "GET_IMAGES", lambda message: self.set_images(message["data"]))
 
     def set_images(self, images):
         self.images = images
@@ -72,13 +75,12 @@ class ConnectionManager:
         self.adress = adr
 
     def connect(self, canvas_bytes_len, on_connect, on_disconnect):
-        self.on_connect = on_connect
         self.on_disconnect = on_disconnect
         if self.connection:
             return
         else:
             print(self.connection)
-        
+
         def thread():
             with Client(("localhost", self.adress), authkey=b"2137") as connection:
                 print("client created")
@@ -95,14 +97,13 @@ class ConnectionManager:
                         if message == 'close':
                             print("closing connection...")
                             break
-                        if("imageData" not in message):
+                        if ("imageData" not in message):
                             print("recived message", format_message(message))
                         self.emit_message(message)
                     except Exception as e:
                         print("Error on reciving messages", e)
                         self.connection = None
                         if self.shm and check_shared_memory_exists("krita-blender"):
-                            # self.shm.close()
                             self.shm.unlink()
                             self.shm = None
                         break
@@ -112,10 +113,10 @@ class ConnectionManager:
         t1.start()
 
     def disconnect(self):
+        '''gets called when user closes connection'''
         if self.shm and check_shared_memory_exists("krita-blender"):
             self.shm.unlink()
         if self.connection:
-            # self.connection.send("close")
             self.connection.close()
             self.connection = None
             if self.on_disconnect:
@@ -124,6 +125,7 @@ class ConnectionManager:
             print("there is no connection")
 
     def emit_message(self, message):
+        '''emits a message to all listeners inside this object'''
         if isinstance(message, object) and "type" in message and "data" in message:
             print(ConnectionManager.listeners, format_message(message))
             event_type = message["type"]
@@ -136,14 +138,14 @@ class ConnectionManager:
         if self.shm and check_shared_memory_exists("krita-blender"):
             self.shm.unlink()
             self.shm = None
-        # self.shm.close()
+
         asyncio.run(self.request({"type": "CLOSE_MEMORY", "data": ""}))
         try:
             self.shm = shared_memory.SharedMemory(
                 name="krita-blender", create=True, size=canvas_bytes_len
             )
             print("memory  created")
-        except:
+        except Exception as e:
             print("file exists, trying another way")
             self.shm = shared_memory.SharedMemory(
                 name="krita-blender", create=False, size=canvas_bytes_len
@@ -167,7 +169,7 @@ class ConnectionManager:
         self.linked_document = None
         asyncio.run(self.request({"data": "", "type": "REMOVE_LINK"}))
         asyncio.run(self.request({"data": "", "type": "GET_IMAGES"}))
-        
+
     async def request(self, payload):
         if self.connection:
             event_loop = asyncio.get_event_loop()
@@ -176,7 +178,7 @@ class ConnectionManager:
             payload["requestId"] = requestId
             ConnectionManager.requestId += 1
 
-            async def chuj():
+            async def task():
                 def on_nop(msg):
                     print("future cancelled")
                     if msg["requestId"] == self.requestId:
@@ -189,12 +191,13 @@ class ConnectionManager:
                 failure_listener = MessageListener("nop", on_nop)
                 success_listener = MessageListener(payload["type"], on_success)
                 future.add_done_callback(
-                    lambda fut: (failure_listener.destroy(), success_listener.destroy())
+                    lambda fut: (failure_listener.destroy(),
+                                 success_listener.destroy())
                 )
                 self.send_message(payload)
                 print("future before")
 
-            await asyncio.create_task(chuj())
+            await asyncio.create_task(task())
             res = await asyncio.wait_for(future, 3.0)
             print("future done")
             return res
@@ -217,10 +220,12 @@ def override_image(image, conn_manager):
     )
     print("resizing")
     conn_manager.resize_memory(size[0] * size[1] * depth)
-    asyncio.run(conn_manager.request({"data": image, "type": "OVERRIDE_IMAGE"}))
+    asyncio.run(conn_manager.request(
+        {"data": image, "type": "OVERRIDE_IMAGE"}))
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
 
-def refresh_document(doc): # TODO: duplicated code, move somewhere else 
+
+def refresh_document(doc):  # TODO: duplicated code, move somewhere else
     root_node = doc.rootNode()
     if root_node and len(root_node.childNodes()) > 0:
         test_layer = doc.createNode("DELME", "paintLayer")
@@ -229,18 +234,19 @@ def refresh_document(doc): # TODO: duplicated code, move somewhere else
 
 
 def blender_image_as_new_layer(image_object, conn_manager):
-    
+
     depth = Krita.instance().activeDocument().colorDepth()
-    images = asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))['data']
+    images = asyncio.run(conn_manager.request(
+        {"data": "", "type": "GET_IMAGES"}))['data']
     pixel_size = 0
     match depth:
-        case "F32": 
+        case "F32":
             pixel_size = 4
-        case "F16": 
+        case "F16":
             pixel_size = 2
-        case "U16": 
+        case "U16":
             pixel_size = 2
-        case "U8": 
+        case "U8":
             pixel_size = 1
     image = None
     for i in images:
@@ -248,22 +254,27 @@ def blender_image_as_new_layer(image_object, conn_manager):
             image = i
     if not image:
         return
-    print(image_object["size"][0],image_object["size"][1],pixel_size, image_object["size"][0]*image_object["size"][1]*pixel_size*4)
-    with shared_memory_context(name='blender-krita',destroy=True, size=image_object["size"][0]*image_object["size"][1]*pixel_size*4,create=True) as new_shm:
-        data = asyncio.run(conn_manager.request({"data": {"image":image_object,"depth":depth}, "type": "IMAGE_TO_LAYER"}))
+    print(image_object["size"][0], image_object["size"][1], pixel_size,
+          image_object["size"][0]*image_object["size"][1]*pixel_size*4)
+    with shared_memory_context(name='blender-krita', destroy=True, size=image_object["size"][0]*image_object["size"][1]*pixel_size*4, create=True) as new_shm:
+        asyncio.run(conn_manager.request(
+            {"data": {"image": image_object, "depth": depth}, "type": "IMAGE_TO_LAYER"}))
         pprint(images)
-        
+
         krita_instance = Krita.instance()
         document = krita_instance.activeDocument()
         if document:
-            new_layer = document.createNode(image['name'] + "__from_blender", "paintLayer")
+            new_layer = document.createNode(
+                image['name'] + "__from_blender", "paintLayer")
             document.rootNode().addChildNode(new_layer, None)
-            new_layer.setPixelData(new_shm.buf.tobytes(), 0, 0, image["size"][0],image["size"][1])
+            new_layer.setPixelData(new_shm.buf.tobytes(
+            ), 0, 0, image["size"][0], image["size"][1])
             refresh_document(document)
-            
+
 
 def change_memory(conn_manager: ConnectionManager):
-    print("change memory",conn_manager.linked_document)
+    '''function to resize memory if image data is changed'''
+    print("change memory", conn_manager.linked_document)
     doc = Krita.instance().activeDocument()
     size = [doc.width(), doc.height()]
     depth = int(doc.colorDepth()[1:]) // 2
@@ -273,7 +284,8 @@ def change_memory(conn_manager: ConnectionManager):
     elif not active_image or active_image['size'] != size:
         asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
 
-    if(conn_manager.linked_document == None): return
+    if conn_manager.linked_document is None:
+        return
     print(conn_manager.linked_document)
 
     print(
@@ -285,15 +297,15 @@ def change_memory(conn_manager: ConnectionManager):
     )
     print("resizing")
     conn_manager.resize_memory(size[0] * size[1] * depth)
-    asyncio.run(conn_manager.request({"data": active_image, "type": "OVERRIDE_IMAGE"}))
+    asyncio.run(conn_manager.request(
+        {"data": active_image, "type": "OVERRIDE_IMAGE"}))
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
 
-def get_uv_overlay(conn_manager: ConnectionManager):
-    pass
 
-def format_message(message):
-    if hasattr(message,'noshow') or "noshow" in message:
-        return {"type":message['type'], "requestId":message['requestId'],"formattedMessage":True}
-    else: 
-        message["formattedMessage"] = True
-        return message
+def format_message(msg: object):
+    '''function that removes data if "noshow" flag is present, useful for not clogging terminal'''
+    if hasattr(msg, 'noshow') or "noshow" in msg:
+        return {"type": msg['type'], "requestId": msg['requestId'], "formattedMessage": True}
+    else:
+        msg["formattedMessage"] = True
+        return msg
