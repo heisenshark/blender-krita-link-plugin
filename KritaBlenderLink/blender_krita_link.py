@@ -1,33 +1,21 @@
-from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
-from krita import Krita, DockWidget, QOpenGLWidget, QtCore, Notifier
-from PyQt5.QtWidgets import (
-    QPushButton,
-    QLabel,
-    QHBoxLayout,
-    QVBoxLayout,
-    QWidget,
-    QFrame,
-    QCheckBox,
-    QSpacerItem,
-    QSizePolicy,
-    QLayout,
-    QDockWidget,
-    QColorDialog
-)
-from PyQt5.QtCore import (
-    QObject,
-    QEvent
-)
-from PyQt5.QtGui import QColor
 from threading import Timer, Thread
+import os as os
 import asyncio
-from .connection import ConnectionManager, MessageListener, change_memory, format_message
+from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
+from .connection import (
+    ConnectionManager,
+    MessageListener,
+    change_memory,
+    format_message,
+)
+from PyQt5 import uic, sip
 from .ui.ImageList import ImageList
 from .settings import Settings
 from .ImageState import ImageState
-from PyQt5 import uic
-import os as os
-from PyQt5 import sip
+from krita import Krita, DockWidget, Notifier
+from PyQt5.QtWidgets import QColorDialog
+from PyQt5.QtCore import QObject, QEvent
+from PyQt5.QtGui import QColor
 
 DOCKER_TITLE = "Blender Krita Link"
 
@@ -39,9 +27,9 @@ class ClickFilter(QObject):
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
-            if self.function:  # Sprawdź, czy funkcja została przekazana
-                self.function()  # Wywołaj funkcję
-            return True  # Zatrzymaj propagację zdarzenia
+            if self.function:
+                self.function()
+            return True
         return super().eventFilter(obj, event)
 
 
@@ -57,8 +45,7 @@ class BlenderKritaLink(DockWidget):
         self.connection = ConnectionManager()
         self.avc_connected = False
         ImageState.instance.onImageDataChange.connect(
-            lambda x: [change_memory(self.connection),
-                       print("image file changed")]
+            lambda x: [change_memory(self.connection), print("image file changed")]
         )
         ImageState.instance.onPixelsChange.connect(
             lambda x: self.on_update_image() and print("drawed smh")
@@ -73,14 +60,19 @@ class BlenderKritaLink(DockWidget):
         app_notifier.applicationClosing.connect(lambda: print("app closing"))
 
         self.setWindowTitle("Blender Krita Link")
-        self.central_widget = uic.loadUi(os.path.join(os.path.dirname(
-            os.path.realpath(__file__)), "BlenderKritaLinkUI.ui"))
+        self.central_widget = uic.loadUi(
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "BlenderKritaLinkUI.ui"
+            )
+        )
         self.setWidget(self.central_widget)
 
         self.central_widget.SendOnDrawCheckbox.setCheckState(
-            2 if Settings.getSetting("listenCanvas") else 0)
+            2 if Settings.getSetting("listenCanvas") else 0
+        )
         self.central_widget.SendOnDrawCheckbox.stateChanged.connect(
-            self.on_listen_change)
+            self.on_listen_change
+        )
 
         def on_uv_show(state):
             print("uvshow changed", state)
@@ -90,46 +82,48 @@ class BlenderKritaLink(DockWidget):
                     uo.update()
 
         self.central_widget.ShowUVCheckbox.setCheckState(
-            2 if Settings.getSetting("showUVs") else 0)
+            2 if Settings.getSetting("showUVs") else 0
+        )
         self.central_widget.ShowUVCheckbox.stateChanged.connect(on_uv_show)
 
         def open_color_dialog():
-            color = QColorDialog.getColor(initial=QColor(Settings.getSetting(
-                "uvColor")), options=QColorDialog.ColorDialogOption.ShowAlphaChannel)
+            color = QColorDialog.getColor(
+                initial=QColor(Settings.getSetting("uvColor")),
+                options=QColorDialog.ColorDialogOption.ShowAlphaChannel,
+            )
             UvOverlay.COLOR = color
             self.central_widget.UVColorButton.setStyleSheet(
-                f"background-color: {color.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;")
-            Settings.setSetting("uvColor", color.name(
-                QColor.NameFormat.HexArgb))
+                f"background-color: {color.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
+            )
+            Settings.setSetting("uvColor", color.name(QColor.NameFormat.HexArgb))
 
         self.filter = ClickFilter(open_color_dialog)
         c = QColor(Settings.getSetting("uvColor"))
         self.central_widget.UVColorButton.setStyleSheet(
-            f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;")
+            f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
+        )
         # self.centralWidget.UVColorButton.clicked.connect(openColorDialog)
         self.central_widget.UVColorButton.installEventFilter(self.filter)
 
         self.central_widget.ConnectButton.clicked.connect(self.connect_blender)
-        self.central_widget.DisconnectButton.clicked.connect(
-            self.connection.disconnect)
+        self.central_widget.DisconnectButton.clicked.connect(self.connection.disconnect)
         self.central_widget.SendDataButton.clicked.connect(self.send_pixels)
-        self.central_widget.RefreshImagesButton.clicked.connect(
-            self.get_image_data)
-        self.central_widget.ImageTosRGBButton.clicked.connect(
-            self.image_to_srgb)
-        self.central_widget.SelectUVIslandsButton.clicked.connect(
-            self.select_uvs)
+        self.central_widget.RefreshImagesButton.clicked.connect(self.get_image_data)
+        self.central_widget.ImageTosRGBButton.clicked.connect(self.image_to_srgb)
+        self.central_widget.SelectUVIslandsButton.clicked.connect(self.select_uvs)
         self.central_widget.UVOverlayButton.clicked.connect(self.get_uv_overlay)
 
-        ImageList(parent=self.central_widget.ImagesFrame,
-                  con_manager=self.connection)
+        ImageList(parent=self.central_widget.ImagesFrame, con_manager=self.connection)
         self.central_widget.ImagesFrame.layout().addWidget(ImageList.instance)
 
         app_notifier.viewCreated.connect(self.attach_uv_viewer)
 
         print(self.central_widget, self.central_widget.ConnectButton)
-        print(os.path.join(os.path.dirname(
-            os.path.realpath(__file__)), "BlenderKritaLinkUI.ui"))
+        print(
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "BlenderKritaLinkUI.ui"
+            )
+        )
 
         MessageListener("SELECT_UVS", self.handle_uv_response)
         MessageListener("GET_UV_OVERLAY", self.handle_uv_overlay)
@@ -156,16 +150,17 @@ class BlenderKritaLink(DockWidget):
 
     def on_blender_connected(self):
         self.central_widget.ConnectionStatus.setText(
-            "Connection status: blender connected")
+            "Connection status: blender connected"
+        )
         Thread(target=self.get_image_data).start()
 
     def get_image_data(self):
-        if self.connection.connection == None:
+        if self.connection.connection is None:
             return
         images = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
         ImageList.instance.refresh_signal.emit(images["data"])
 
-    def refresh_document(self,doc):
+    def refresh_document(self, doc):
         root_node = doc.rootNode()
         if root_node and len(root_node.childNodes()) > 0:
             test_layer = doc.createNode("DELME", "paintLayer")
@@ -179,8 +174,7 @@ class BlenderKritaLink(DockWidget):
         if doc != linked_doc or not linked_doc:
             return
 
-        print(self.connection.get_active_image()[
-              "size"], [doc.width(), doc.height()])
+        print(self.connection.get_active_image()["size"], [doc.width(), doc.height()])
 
         if self.connection.get_active_image()["size"] != [doc.width(), doc.height()]:
             self.connection.remove_link()
@@ -221,7 +215,7 @@ class BlenderKritaLink(DockWidget):
         self.attach_uv_viewer()
 
     def attach_uv_viewer(self):
-        active_window = Application.activeWindow()
+        active_window = Application.activeWindow()  # noqa: F821
         active_view = active_window.activeView()
         if active_view.window() is None:
             return
@@ -237,7 +231,7 @@ class BlenderKritaLink(DockWidget):
                     ov.update_stuff()
             return
         if active_view.document() is None:
-            raise RuntimeError('Document of active view is None!')
+            raise RuntimeError("Document of active view is None!")
         my_overlay = UvOverlay(active_view)
         my_overlay.show()
 
@@ -255,12 +249,14 @@ class BlenderKritaLink(DockWidget):
     def handle_uv_response(self, message):
         # print("handle uvs triggered", message)
         action = Krita.instance().action("select_shapes")
-        width_height = [Krita.instance().activeDocument(
-        ).width(), Krita.instance().activeDocument().height()]
-        faces = message['data']
+        width_height = [
+            Krita.instance().activeDocument().width(),
+            Krita.instance().activeDocument().height(),
+        ]
+        faces = message["data"]
         # UvOverlay.set_polygons(faces)
 
-        if action != None:
+        if action is not None:
             print("action exists")
             for g in faces:
                 for f in g:
@@ -272,4 +268,4 @@ class BlenderKritaLink(DockWidget):
 
     def handle_uv_overlay(self, message):
         print("handle_uv_overlay")
-        UvOverlay.set_polygons(message['data'])
+        UvOverlay.set_polygons(message["data"])
