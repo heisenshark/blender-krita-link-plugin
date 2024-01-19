@@ -1,29 +1,22 @@
 # code heavily inspired from https://krita-artists.org/t/canvas-render-how-to/31540
 from __future__ import annotations
-from ast import List
-import typing
-from krita import *
-from PyQt5.QtCore import (
-    Qt,
-    QEvent,
-    QPointF,
-    QRect,
-    QObject,
-)
-from PyQt5.QtGui import (
-    QPainter,
-    QPen,
-    QColor,
-    QPolygonF,
-    QTransform
-)
-from PyQt5.QtWidgets import (
-    QWidget,
-    QMdiArea,
-    QAbstractScrollArea,
-    QMdiSubWindow,
-)
+
+from krita import Krita
 from PyQt5 import sip
+from PyQt5.QtCore import (
+    QEvent,
+    QObject,
+    QPointF,
+    Qt,
+)
+from PyQt5.QtGui import QColor, QPainter, QPen, QPolygonF, QTransform
+from PyQt5.QtWidgets import (
+    QAbstractScrollArea,
+    QMdiArea,
+    QMdiSubWindow,
+    QWidget,
+)
+
 from .settings import Settings
 
 

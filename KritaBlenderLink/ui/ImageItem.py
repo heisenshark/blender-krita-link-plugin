@@ -1,8 +1,12 @@
-import asyncio
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt, pyqtSignal, QSize
-from PyQt5.QtGui import QPainter, QResizeEvent
-from krita import *
+from PyQt5.QtWidgets import (
+    QWidget,
+    QSizePolicy,
+    QHBoxLayout,
+    QSpacerItem,
+    QLabel,
+    QMenu
+)
+from krita import Krita
 
 
 class ImageItem(QWidget):
@@ -40,7 +44,6 @@ class ImageItem(QWidget):
 
         self.image_size = image["size"]
         if not (self.image_size[0] == width and self.image_size[1] == height):
-            # print(image["size"], width, height)
             self.label_9.setStyleSheet("color: red;")
 
         self.horizontalLayout_2.addWidget(self.label_9)
@@ -65,7 +68,7 @@ class ImageItem(QWidget):
     def contextMenuEvent(self, event):
         cmenu = QMenu(self)
 
-        section = cmenu.addSection(self.image["name"])
+        cmenu.addSection(self.image["name"])
         openAct = cmenu.addAction("From Blender To new Layer")
         linkImageAct = cmenu.addAction("Link Image")
 

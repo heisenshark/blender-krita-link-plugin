@@ -1,6 +1,6 @@
 import bpy
 import numpy as np
-from pprint import pprint
+
 class ImageManager:
     INSTANCE = None
 
