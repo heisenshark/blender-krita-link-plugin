@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QMdiArea,
     QMdiSubWindow,
     QWidget,
+    QOpenGLWidget
 )
 
 from .settings import Settings
@@ -99,6 +100,7 @@ class UvOverlay(QWidget):
     def __init__(self, view):
         parent = get_q_view(view)
         self.view = view
+        self.openGL = parent.findChild(QOpenGLWidget)            
         super().__init__(parent)
 
         UvOverlay.COLOR = QColor(Settings.getSetting("uvColor") or "#000000FF")
@@ -143,9 +145,16 @@ class UvOverlay(QWidget):
     def paintEvent(self, e):
         document = self.view.document()
         view = self.view
+        
+        if self.openGL is not None: 
+            for c in self.openGL.children(): #hide uvs so they dont cover palette popup
+                if c.isVisible() and c.metaObject().className() == "KisPopupPalette": 
+                    return
+            
         canvas = view.canvas()
         painter = QPainter(self)
         show_uv = Settings.getSetting("showUVs")
+        
         if not show_uv:
             return
         try:
