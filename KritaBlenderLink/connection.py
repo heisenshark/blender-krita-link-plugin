@@ -73,6 +73,7 @@ class ConnectionManager:
 
     def connect(self, canvas_bytes_len, on_connect, on_disconnect):
         self.on_disconnect = on_disconnect
+        self.linked_document = None
         if self.connection:
             return
         else:
@@ -104,6 +105,7 @@ class ConnectionManager:
                             self.shm.unlink()
                             self.shm = None
                         break
+                self.linked_document = None
                 on_disconnect()
 
         t1 = Thread(target=thread)
@@ -269,8 +271,6 @@ def blender_image_as_new_layer(image_object, conn_manager):
                 }
             )
         )
-        pprint(images)
-
         krita_instance = Krita.instance()
         document = krita_instance.activeDocument()
         if document:
