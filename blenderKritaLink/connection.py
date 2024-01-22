@@ -4,7 +4,7 @@ from multiprocessing import shared_memory
 import bpy
 import numpy as np
 from .image_manager import ImageManager
-from .uv_extractor import getUvData
+from .uv_extractor import getUvData, getUvOverlay
 from pprint import pprint
 from contextlib import contextmanager
 
@@ -236,7 +236,7 @@ class KritaConnection:
 
                                 case "GET_UV_OVERLAY":
                                     print("getting uv overlay")
-                                    data = getUvData()
+                                    data = getUvOverlay()
                                     conn.send(
                                         {
                                             "type": "GET_UV_OVERLAY",
@@ -315,7 +315,7 @@ class KritaConnection:
                                             case _:
                                                 t = np.float32
                                         np_arr = np_arr.reshape(
-                                            (d.size[0], d.size[1], 4)
+                                            (d.size[1], d.size[0], 4)
                                         )
                                         np_arr = np.flipud(np_arr).flatten()
                                         arr = np.frombuffer(new_shm.buf, t, lenght)
@@ -342,7 +342,7 @@ class KritaConnection:
 
             except Exception as e:
                 pprint(e)
-                if KritaConnection.CONNECTION is None:
+                if KritaConnection.CONNECTION is not None:
                     KritaConnection.CONNECTION.close()
                 KritaConnection.CONNECTION = None
 
