@@ -26,7 +26,6 @@ class Settings:
     
     def getSetting(name:str):
         settings = Settings.instance.data
-        print(settings)
         if name in settings: 
             return settings[name]
         else: 

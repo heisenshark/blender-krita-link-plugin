@@ -1743,7 +1743,7 @@ def getUvData():
     selected_object = bpy.context.view_layer.objects.active
     mode = selected_object.mode
     
-    if selected_object.data.uv_layers.active:
+    if hasattr(selected_object.data,"uv_layers") and hasattr(selected_object.data.uv_layers, "active") and selected_object.data.uv_layers.active:
         uv_layer = selected_object.data.uv_layers.active.data
     else:
         print("does not have UV data.")
@@ -1762,7 +1762,7 @@ def getUvData():
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
-    pprint(bm.faces)
+    # pprint(bm.faces)
     data = get_island_info_from_bmesh(bm,True)
 
     list = []    
@@ -1770,18 +1770,53 @@ def getUvData():
         
     for d in data:
         fcs = d['faces']
-        pprint(fcs)
         for f in fcs:
             valid = True
             loops = []
-            print(uv_layer,selected_object.data.uv_layers.active.data,)
             for u in f['face'].loops:                
                 if not u[uv_lay].select : 
                     valid = False
                 else:
-                    print(u.index)
                     loop = [u[uv_lay].uv[0],1-u[uv_lay].uv[1]]
                     loops.append(loop)
             if valid: list.append(loops)
-    pprint(list)
+    return list
+
+def getUvOverlay():
+    selected_object = bpy.context.view_layer.objects.active
+    mode = selected_object.mode
+    
+    if hasattr(selected_object.data,"uv_layers") and hasattr(selected_object.data.uv_layers, "active") and selected_object.data.uv_layers.active:
+        uv_layer = selected_object.data.uv_layers.active.data
+    else:
+        print("does not have UV data.")
+        uv_layer = None
+        return []
+    print(mode)
+    bm = None
+    if mode == 'EDIT':
+        print(mode)
+        bm = bmesh.from_edit_mesh(selected_object.data)
+    else:
+        print(mode)
+        bm = bmesh.new()
+        bm.from_mesh(selected_object.data)
+    
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    # pprint(bm.faces)
+    data = get_island_info_from_bmesh(bm,False)
+
+    list = []
+    uv_lay = bm.loops.layers.uv.active
+        
+    for d in data:
+        fcs = d['faces']
+        for f in fcs:
+            loops = []
+            for u in f['face'].loops:                
+                loop = [u[uv_lay].uv[0],1-u[uv_lay].uv[1]]
+                loops.append(loop)
+            list.append(loops)
     return list
