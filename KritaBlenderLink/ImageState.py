@@ -1,12 +1,13 @@
 from krita import Krita, Notifier, QOpenGLWidget, QtWidgets
-from PyQt5.QtCore import pyqtSignal, QSize, QObject
+from PyQt5.QtCore import pyqtSignal, QObject
+
 
 class ImageState(QObject):
     data = {
-        "colorProfile" : None,
-        "colorModel" : None,
-        "colorDepth" : None,
-        "size" : [0,0]
+        "colorProfile": None,
+        "colorModel": None,
+        "colorDepth": None,
+        "size": [0, 0],
     }
 
     onPixelsChange = pyqtSignal(object)
@@ -14,19 +15,17 @@ class ImageState(QObject):
     onSRGBColorSpace = pyqtSignal(bool)
     instance = None
 
-
-
     def __init__(self) -> None:
         print("init state....")
         super().__init__()
         ImageState.instance = self
-        appNotifier:Notifier = Krita.instance().notifier()
+        appNotifier: Notifier = Krita.instance().notifier()
         appNotifier.setActive(True)
         appNotifier.windowCreated.connect(self.setup_listening)
         appNotifier.viewCreated.connect(lambda x: self.check_color_profile())
         appNotifier.imageCreated.connect(lambda x: self.set_data(self.get_data()))
-        self.onPixelsChange.connect(lambda x:print("pixels changed"))
-        self.onImageDataChange.connect(lambda x:print("imagedata changed"))
+        self.onPixelsChange.connect(lambda x: print("pixels changed"))
+        self.onImageDataChange.connect(lambda x: print("imagedata changed"))
 
     def get_data(self):
         data = {}
@@ -37,39 +36,37 @@ class ImageState(QObject):
             data["colorProfile"] = document.colorProfile()
             data["colorModel"] = document.colorModel()
             data["colorDepth"] = document.colorDepth()
-            data["size"] = [document.width(),document.height()]
+            data["size"] = [document.width(), document.height()]
             return data
-    
-    def set_data(self,data):
+
+    def set_data(self, data):
         self.data = data
 
     def check_color_profile(self):
         if not Krita.instance().activeDocument():
-            return 
+            return
         d = self.get_data()
-        self.instance.onSRGBColorSpace.emit(d['colorProfile'] == "sRGB")
+        self.instance.onSRGBColorSpace.emit(d["colorProfile"] == "sRGB")
 
-    def compare_data(self,data1,data2):
-        print(data1 , data2)
+    def compare_data(self, data1, data2):
+        print(data1, data2)
         self.check_color_profile()
-        for key,value in data1.items():
-
+        for key, value in data1.items():
             if key == "size":
-                if value == data2['size']:
+                if value == data2["size"]:
                     continue
                 else:
                     return False
             if key not in data2 or data2[key] != value:
                 return False
         return len(dir(data1)) == len(dir(data2))
-    
+
     def on_properties_change(self):
         print("improp change")
-        is_eq = self.compare_data(self.get_data(),self.data)
+        is_eq = self.compare_data(self.get_data(), self.data)
         if not is_eq:
             self.onImageDataChange.emit(self.get_data())
         self.data = self.get_data()
-    
 
     def setup_listening(self):
         QtWidgets.qApp.installEventFilter(self)
@@ -84,12 +81,14 @@ class ImageState(QObject):
         Krita.instance().action("file_open").triggered.connect(
             lambda x: self.check_color_profile()
         )
-        
+
         Krita.instance().action("file_open_recent").triggered.connect(
             lambda x: self.check_color_profile()
         )
 
-        Krita.instance().action("image_properties").triggered.connect(self.on_properties_change)
+        Krita.instance().action("image_properties").triggered.connect(
+            self.on_properties_change
+        )
 
     def eventFilter(self, obj, event):
         if isinstance(obj, QOpenGLWidget):
@@ -99,5 +98,6 @@ class ImageState(QObject):
                 # print("painted Something on", event.type(), event.button())
                 print("painted Something on")
         return False
+
 
 ImageState()

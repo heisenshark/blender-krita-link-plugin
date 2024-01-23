@@ -1,10 +1,13 @@
-import typing
-import asyncio
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QListWidget, QWidget, QSizePolicy, QListWidgetItem
 from PyQt5.QtCore import pyqtSignal, QSize
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from .ImageItem import ImageItem
-from KritaBlenderLink.connection import ConnectionManager, MessageListener, override_image, blender_image_as_new_layer
+from KritaBlenderLink.connection import (
+    ConnectionManager,
+    MessageListener,
+    override_image,
+    blender_image_as_new_layer,
+)
+
 
 class ImageList(QListWidget):
     image_list = []
@@ -12,11 +15,13 @@ class ImageList(QListWidget):
     clear_signal = pyqtSignal()
     instance = None
 
-    def __init__(self, con_manager: ConnectionManager, parent: QWidget | None = ...) -> None:
+    def __init__(
+        self, con_manager: ConnectionManager, parent: QWidget | None = ...
+    ) -> None:
         ImageList.instance = self
         self.conn_manager = con_manager
         super().__init__(parent)
-        self.setObjectName(u"ImageList")
+        self.setObjectName("ImageList")
         self.setObjectName("scrollArea")
         self.setMinimumSize(QSize(0, 100))
         self.scrollAreaWidgetContents = QWidget()
@@ -25,13 +30,16 @@ class ImageList(QListWidget):
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(
-            self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth())
+            self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth()
+        )
 
         self.refresh_signal.connect(self.update_images_list)
         self.clear_signal.connect(self.clear_images_list)
 
         MessageListener(
-            "GET_IMAGES", lambda message: ImageList.instance.refresh_signal.emit(message['data']))
+            "GET_IMAGES",
+            lambda message: ImageList.instance.refresh_signal.emit(message["data"]),
+        )
 
     def update_images_list(self, images_list):
         print("update time")
@@ -39,10 +47,17 @@ class ImageList(QListWidget):
         print("items to be removed", len(images_list))
         for image in images_list:
             listItem = QListWidgetItem(self)
-            item = ImageItem(image=image, on_open=lambda image: blender_image_as_new_layer(image,self.conn_manager) , on_override= lambda image: override_image(image, self.conn_manager), parent=self.scrollAreaWidgetContents)
+            item = ImageItem(
+                image=image,
+                on_open=lambda image: blender_image_as_new_layer(
+                    image, self.conn_manager
+                ),
+                on_override=lambda image: override_image(image, self.conn_manager),
+                parent=self.scrollAreaWidgetContents,
+            )
             listItem.setSizeHint(item.sizeHint())
             self.addItem(listItem)
-            self.setItemWidget(listItem,item)
+            self.setItemWidget(listItem, item)
 
     def clear_images_list(self):
         self.clear()

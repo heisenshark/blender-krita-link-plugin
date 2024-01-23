@@ -3,7 +3,6 @@ from threading import Thread
 from multiprocessing import shared_memory
 from multiprocessing.connection import Client
 import asyncio
-from pprint import pprint
 from contextlib import contextmanager
 
 
@@ -144,7 +143,7 @@ class ConnectionManager:
                 name="krita-blender", create=True, size=canvas_bytes_len
             )
             print("memory  created")
-        except:
+        except Exception:
             print("file exists, trying another way")
             self.shm = shared_memory.SharedMemory(
                 name="krita-blender", create=False, size=canvas_bytes_len
