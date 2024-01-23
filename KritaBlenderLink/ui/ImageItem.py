@@ -1,8 +1,13 @@
-import asyncio
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt,pyqtSignal,QSize
-from PyQt5.QtGui import QPainter, QResizeEvent
-from krita import *
+from PyQt5.QtWidgets import (
+    QWidget,
+    QSizePolicy,
+    QHBoxLayout,
+    QSpacerItem,
+    QLabel,
+    QMenu
+)
+from krita import Krita
+
 
 class ImageItem(QWidget):
     def __init__(self, image, on_open, on_override, parent=None):
@@ -18,7 +23,6 @@ class ImageItem(QWidget):
             and Krita.instance()
             and Krita.instance().activeDocument()
         ):
-            print("dupa")
             document = Krita.instance().activeDocument()
             height = document.height()
             width = document.width()
@@ -31,7 +35,7 @@ class ImageItem(QWidget):
         self.setSizePolicy(sizePolicy1)
         self.horizontalLayout_2 = QHBoxLayout(self)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(0,0,0,0)
+        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.label_9 = QLabel(text=image["name"], parent=self)
         self.label_9.setObjectName("label_9")
 
@@ -40,7 +44,6 @@ class ImageItem(QWidget):
 
         self.image_size = image["size"]
         if not (self.image_size[0] == width and self.image_size[1] == height):
-            print(image["size"], width, height)
             self.label_9.setStyleSheet("color: red;")
 
         self.horizontalLayout_2.addWidget(self.label_9)
@@ -56,30 +59,27 @@ class ImageItem(QWidget):
 
         self.horizontalLayout_2.addWidget(self.label_size)
 
-
-        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        sizePolicy2 = QSizePolicy(
+            QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
         self.setLayout(self.horizontalLayout_2)
 
-
     def contextMenuEvent(self, event):
         cmenu = QMenu(self)
 
-        section = cmenu.addSection(self.image["name"])
+        cmenu.addSection(self.image["name"])
         openAct = cmenu.addAction("From Blender To new Layer")
-        linkImageAct  = cmenu.addAction("Link Image")
-        
+        linkImageAct = cmenu.addAction("Link Image")
+
         if (
             hasattr(Krita, "instance")
             and Krita.instance()
             and Krita.instance().activeDocument()
         ):
-            print("dupa")
             document = Krita.instance().activeDocument()
             height = document.height()
             width = document.width()
-
 
         if not (self.image_size[0] == width and self.image_size[1] == height):
             linkImageAct.setDisabled(True)

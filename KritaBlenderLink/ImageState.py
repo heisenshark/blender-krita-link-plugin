@@ -14,6 +14,8 @@ class ImageState(QObject):
     onSRGBColorSpace = pyqtSignal(bool)
     instance = None
 
+
+
     def __init__(self) -> None:
         print("init state....")
         super().__init__()
@@ -28,11 +30,15 @@ class ImageState(QObject):
 
     def get_data(self):
         data = {}
-        data["colorProfile"] = Krita.instance().activeDocument().colorProfile()
-        data["colorModel"] = Krita.instance().activeDocument().colorModel()
-        data["colorDepth"] = Krita.instance().activeDocument().colorDepth()
-        data["size"] = [Krita.instance().activeDocument().width(),Krita.instance().activeDocument().height()]
-        return data
+        document = Krita.instance().activeDocument()
+        if document is None:
+            return data
+        else:
+            data["colorProfile"] = document.colorProfile()
+            data["colorModel"] = document.colorModel()
+            data["colorDepth"] = document.colorDepth()
+            data["size"] = [document.width(),document.height()]
+            return data
     
     def set_data(self,data):
         self.data = data
@@ -87,10 +93,11 @@ class ImageState(QObject):
 
     def eventFilter(self, obj, event):
         if isinstance(obj, QOpenGLWidget):
-            if event.type() == 3 and event.button() == 1:
+            if event.type() == 93 or (event.type() == 3 and event.button() == 1):
                 print(obj, type(obj).__bases__)
                 self.onPixelsChange.emit(self.data)
-                print("painted Something on", event.type(), event.button())
+                # print("painted Something on", event.type(), event.button())
+                print("painted Something on")
         return False
 
 ImageState()
