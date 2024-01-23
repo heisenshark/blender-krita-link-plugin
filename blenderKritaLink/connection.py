@@ -41,7 +41,7 @@ class KritaConnection:
         if KritaConnection.CONNECTION is not None:
             print("sending close")
             self.__STOP_SIGNAL.set()
-            
+
         elif self.listener is not None:
             print("accepting")
             with Client(

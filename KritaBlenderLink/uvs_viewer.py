@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QMdiArea,
     QMdiSubWindow,
     QWidget,
-    QOpenGLWidget
+    QOpenGLWidget,
 )
 
 from .settings import Settings
@@ -70,8 +70,8 @@ def get_transform(view):
     zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
     transform = QTransform()
     transform.translate(
-        _offset(area.horizontalScrollBar()),
-        _offset(area.verticalScrollBar()))
+        _offset(area.horizontalScrollBar()), _offset(area.verticalScrollBar())
+    )
     transform.rotate(canvas.rotation())
     transform.scale(zoom, zoom)
     return transform
@@ -100,7 +100,7 @@ class UvOverlay(QWidget):
     def __init__(self, view):
         parent = get_q_view(view)
         self.view = view
-        self.openGL = parent.findChild(QOpenGLWidget)            
+        self.openGL = parent.findChild(QOpenGLWidget)
         super().__init__(parent)
 
         UvOverlay.COLOR = QColor(Settings.getSetting("uvColor") or "#000000FF")
@@ -132,7 +132,7 @@ class UvOverlay(QWidget):
         for p in UvOverlay.POLYGONS:
             polygon = QPolygonF()
             for v in p:
-                polygon.append(QPointF((v[0]-0.5)*width, (v[1]-0.5)*height))
+                polygon.append(QPointF((v[0] - 0.5) * width, (v[1] - 0.5) * height))
             self._polygons.append(polygon)
 
         Krita.instance().action("view_ruler").triggered.connect(self.resize_handle)
@@ -145,16 +145,18 @@ class UvOverlay(QWidget):
     def paintEvent(self, e):
         document = self.view.document()
         view = self.view
-        
-        if self.openGL is not None: 
-            for c in self.openGL.children(): #hide uvs so they dont cover palette popup
-                if c.isVisible() and c.metaObject().className() == "KisPopupPalette": 
+
+        if self.openGL is not None:
+            for (
+                c
+            ) in self.openGL.children():  # hide uvs so they dont cover palette popup
+                if c.isVisible() and c.metaObject().className() == "KisPopupPalette":
                     return
-            
+
         canvas = view.canvas()
         painter = QPainter(self)
         show_uv = Settings.getSetting("showUVs")
-        
+
         if not show_uv:
             return
         try:
@@ -166,7 +168,7 @@ class UvOverlay(QWidget):
             document = view.document()
             zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
 
-            painter.setPen(QPen(UvOverlay.COLOR, 0.5/zoom, Qt.SolidLine))
+            painter.setPen(QPen(UvOverlay.COLOR, 0.5 / zoom, Qt.SolidLine))
             for p in self._polygons:
                 painter.drawPolygon(p)
 
@@ -182,10 +184,15 @@ class UvOverlay(QWidget):
         print("resize !!!! ")
         q_canvas = self.parent().findChild(QAbstractScrollArea).viewport()
         x, y = ruler_correction()
-        print(q_canvas.x(), q_canvas.y(), q_canvas.geometry().width(),
-              q_canvas.geometry().height())
-        self.setGeometry(x, y, q_canvas.geometry().width(),
-                         q_canvas.geometry().height())
+        print(
+            q_canvas.x(),
+            q_canvas.y(),
+            q_canvas.geometry().width(),
+            q_canvas.geometry().height(),
+        )
+        self.setGeometry(
+            x, y, q_canvas.geometry().width(), q_canvas.geometry().height()
+        )
 
     @staticmethod
     def set_polygons(polygons):

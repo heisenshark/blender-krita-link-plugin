@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QSpacerItem,
     QLabel,
-    QMenu
+    QMenu,
 )
 from krita import Krita
 
@@ -59,8 +59,7 @@ class ImageItem(QWidget):
 
         self.horizontalLayout_2.addWidget(self.label_size)
 
-        sizePolicy2 = QSizePolicy(
-            QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
         self.setLayout(self.horizontalLayout_2)

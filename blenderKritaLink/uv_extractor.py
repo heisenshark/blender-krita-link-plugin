@@ -17,6 +17,7 @@ import bmesh
 
 __DEBUG_MODE = False
 
+
 def check_version(major, minor, _):
     """
     Check blender version
@@ -36,13 +37,15 @@ def make_annotations(cls):
         return cls
 
     # make annotation from attributes
-    props = {k: v
-             for k, v in cls.__dict__.items()
-             if isinstance(v, getattr(bpy.props, '_PropertyDeferred', tuple))}
+    props = {
+        k: v
+        for k, v in cls.__dict__.items()
+        if isinstance(v, getattr(bpy.props, "_PropertyDeferred", tuple))
+    }
     if props:
-        if '__annotations__' not in cls.__dict__:
-            setattr(cls, '__annotations__', {})
-        annotations = cls.__dict__['__annotations__']
+        if "__annotations__" not in cls.__dict__:
+            setattr(cls, "__annotations__", {})
+        annotations = cls.__dict__["__annotations__"]
         for k, v in props.items():
             annotations[k] = v
             delattr(cls, k)
@@ -52,7 +55,7 @@ def make_annotations(cls):
 
 class ChangeRegionType:
     def __init__(self, *_, **kwargs):
-        self.region_type = kwargs.get('region_type', False)
+        self.region_type = kwargs.get("region_type", False)
 
     def __call__(self, cls):
         if check_version(2, 80, 0) >= 0:
@@ -120,7 +123,7 @@ def object_has_uv_layers(obj):
 
 
 def get_object_uv_layers(obj):
-    if obj.type != 'MESH':
+    if obj.type != "MESH":
         return None
     if check_version(2, 80, 0) < 0:
         return obj.data.uv_textures
@@ -129,9 +132,9 @@ def get_object_uv_layers(obj):
 
 
 def icon(icon):
-    if icon == 'IMAGE':
+    if icon == "IMAGE":
         if check_version(2, 80, 0) < 0:
-            return 'IMAGE_COL'
+            return "IMAGE_COL"
 
     return icon
 
@@ -139,42 +142,43 @@ def icon(icon):
 def get_all_space_types():
     if check_version(2, 80, 0) >= 0:
         return {
-            'CLIP_EDITOR': bpy.types.SpaceClipEditor,
-            'CONSOLE': bpy.types.SpaceConsole,
-            'DOPESHEET_EDITOR': bpy.types.SpaceDopeSheetEditor,
-            'FILE_BROWSER': bpy.types.SpaceFileBrowser,
-            'GRAPH_EDITOR': bpy.types.SpaceGraphEditor,
-            'IMAGE_EDITOR': bpy.types.SpaceImageEditor,
-            'INFO': bpy.types.SpaceInfo,
-            'NLA_EDITOR': bpy.types.SpaceNLA,
-            'NODE_EDITOR': bpy.types.SpaceNodeEditor,
-            'OUTLINER': bpy.types.SpaceOutliner,
-            'PROPERTIES': bpy.types.SpaceProperties,
-            'SEQUENCE_EDITOR': bpy.types.SpaceSequenceEditor,
-            'TEXT_EDITOR': bpy.types.SpaceTextEditor,
-            'USER_PREFERENCES': bpy.types.SpacePreferences,
-            'VIEW_3D': bpy.types.SpaceView3D,
+            "CLIP_EDITOR": bpy.types.SpaceClipEditor,
+            "CONSOLE": bpy.types.SpaceConsole,
+            "DOPESHEET_EDITOR": bpy.types.SpaceDopeSheetEditor,
+            "FILE_BROWSER": bpy.types.SpaceFileBrowser,
+            "GRAPH_EDITOR": bpy.types.SpaceGraphEditor,
+            "IMAGE_EDITOR": bpy.types.SpaceImageEditor,
+            "INFO": bpy.types.SpaceInfo,
+            "NLA_EDITOR": bpy.types.SpaceNLA,
+            "NODE_EDITOR": bpy.types.SpaceNodeEditor,
+            "OUTLINER": bpy.types.SpaceOutliner,
+            "PROPERTIES": bpy.types.SpaceProperties,
+            "SEQUENCE_EDITOR": bpy.types.SpaceSequenceEditor,
+            "TEXT_EDITOR": bpy.types.SpaceTextEditor,
+            "USER_PREFERENCES": bpy.types.SpacePreferences,
+            "VIEW_3D": bpy.types.SpaceView3D,
         }
     else:
         return {
-            'VIEW_3D': bpy.types.SpaceView3D,
-            'TIMELINE': bpy.types.SpaceTimeline,
-            'GRAPH_EDITOR': bpy.types.SpaceGraphEditor,
-            'DOPESHEET_EDITOR': bpy.types.SpaceDopeSheetEditor,
-            'NLA_EDITOR': bpy.types.SpaceNLA,
-            'IMAGE_EDITOR': bpy.types.SpaceImageEditor,
-            'SEQUENCE_EDITOR': bpy.types.SpaceSequenceEditor,
-            'CLIP_EDITOR': bpy.types.SpaceClipEditor,
-            'TEXT_EDITOR': bpy.types.SpaceTextEditor,
-            'NODE_EDITOR': bpy.types.SpaceNodeEditor,
-            'LOGIC_EDITOR': bpy.types.SpaceLogicEditor,
-            'PROPERTIES': bpy.types.SpaceProperties,
-            'OUTLINER': bpy.types.SpaceOutliner,
-            'USER_PREFERENCES': bpy.types.SpaceUserPreferences,
-            'INFO': bpy.types.SpaceInfo,
-            'FILE_BROWSER': bpy.types.SpaceFileBrowser,
-            'CONSOLE': bpy.types.SpaceConsole,
+            "VIEW_3D": bpy.types.SpaceView3D,
+            "TIMELINE": bpy.types.SpaceTimeline,
+            "GRAPH_EDITOR": bpy.types.SpaceGraphEditor,
+            "DOPESHEET_EDITOR": bpy.types.SpaceDopeSheetEditor,
+            "NLA_EDITOR": bpy.types.SpaceNLA,
+            "IMAGE_EDITOR": bpy.types.SpaceImageEditor,
+            "SEQUENCE_EDITOR": bpy.types.SpaceSequenceEditor,
+            "CLIP_EDITOR": bpy.types.SpaceClipEditor,
+            "TEXT_EDITOR": bpy.types.SpaceTextEditor,
+            "NODE_EDITOR": bpy.types.SpaceNodeEditor,
+            "LOGIC_EDITOR": bpy.types.SpaceLogicEditor,
+            "PROPERTIES": bpy.types.SpaceProperties,
+            "OUTLINER": bpy.types.SpaceOutliner,
+            "USER_PREFERENCES": bpy.types.SpaceUserPreferences,
+            "INFO": bpy.types.SpaceInfo,
+            "FILE_BROWSER": bpy.types.SpaceFileBrowser,
+            "CONSOLE": bpy.types.SpaceConsole,
         }
+
 
 class Node:
     def __init__(self, key, value=None):
@@ -196,11 +200,9 @@ class Edge:
 
     def other(self, node):
         if self.node_1 == node and self.node_2 == node:
-            raise RuntimeError("Loop edge in {} is not supported."
-                               .format(node.key))
+            raise RuntimeError("Loop edge in {} is not supported.".format(node.key))
         if node not in (self.node_1, self.node_2):
-            raise RuntimeError("Node {} does not belong this edge."
-                               .format(node.key))
+            raise RuntimeError("Node {} does not belong this edge.".format(node.key))
         if self.node_1 == node:
             return self.node_2
         return self.node_1
@@ -213,17 +215,14 @@ class Graph:
 
     def add_node(self, node):
         if node.key in self.nodes:
-            raise RuntimeError("Node '{}' is already registered."
-                               .format(node.key))
+            raise RuntimeError("Node '{}' is already registered.".format(node.key))
         self.nodes[node.key] = node
 
     def add_edge(self, node_1, node_2):
         if node_1.key not in self.nodes:
-            raise RuntimeError("Node '{}' is not registered."
-                               .format(node_1.key))
+            raise RuntimeError("Node '{}' is not registered.".format(node_1.key))
         if node_2.key not in self.nodes:
-            raise RuntimeError("Node '{}' is not registered."
-                               .format(node_2.key))
+            raise RuntimeError("Node '{}' is not registered.".format(node_2.key))
 
         edge = Edge(node_1, node_2)
         self.edges.append(edge)
@@ -318,6 +317,7 @@ def graph_is_isomorphic(graph_1, graph_2):
         node_pairs[node_1] = node_2
 
     return is_isomorphic, node_pairs
+
 
 def is_console_mode():
     if "MUV_CONSOLE_MODE" not in os.environ:
@@ -419,8 +419,12 @@ def mouse_on_region(event, area_type, region_type):
     if region is None:
         return False
 
-    if (pos.x > region.x) and (pos.x < region.x + region.width) and \
-       (pos.y > region.y) and (pos.y < region.y + region.height):
+    if (
+        (pos.x > region.x)
+        and (pos.x < region.x + region.width)
+        and (pos.y > region.y)
+        and (pos.y < region.y + region.height)
+    ):
         return True
 
     return False
@@ -433,8 +437,12 @@ def mouse_on_area(event, area_type):
     if area is None:
         return False
 
-    if (pos.x > area.x) and (pos.x < area.x + area.width) and \
-       (pos.y > area.y) and (pos.y < area.y + area.height):
+    if (
+        (pos.x > area.x)
+        and (pos.x < area.x + area.width)
+        and (pos.y > area.y)
+        and (pos.y < area.y + area.height)
+    ):
         return True
 
     return False
@@ -467,7 +475,7 @@ def create_new_uv_map(obj, name=None):
     diff = uv_maps_new - uv_maps_old
 
     if not list(diff):
-        return None     # no more UV maps can not be created
+        return None  # no more UV maps can not be created
 
     # rename UV map
     new = obj.data.uv_layers[list(diff)[0]]
@@ -494,7 +502,7 @@ def __get_island_info(uv_layer, islands):
             a = Vector((0.0, 0.0))
             ma = Vector((-10000000.0, -10000000.0))
             mi = Vector((10000000.0, 10000000.0))
-            for l in face['face'].loops:
+            for l in face["face"].loops:
                 uv = l[uv_layer].uv
                 ma.x = max(uv.x, ma.x)
                 ma.y = max(uv.y, ma.y)
@@ -509,26 +517,25 @@ def __get_island_info(uv_layer, islands):
             max_uv.y = max(ma.y, max_uv.y)
             min_uv.x = min(mi.x, min_uv.x)
             min_uv.y = min(mi.y, min_uv.y)
-            face['max_uv'] = ma
-            face['min_uv'] = mi
-            face['ave_uv'] = a
+            face["max_uv"] = ma
+            face["min_uv"] = mi
+            face["ave_uv"] = a
         ave_uv = ave_uv / num_uv
 
-        info['center'] = ave_uv
-        info['size'] = max_uv - min_uv
-        info['num_uv'] = num_uv
-        info['group'] = -1
-        info['faces'] = isl
-        info['max'] = max_uv
-        info['min'] = min_uv
+        info["center"] = ave_uv
+        info["size"] = max_uv - min_uv
+        info["num_uv"] = num_uv
+        info["group"] = -1
+        info["faces"] = isl
+        info["max"] = max_uv
+        info["min"] = min_uv
 
         island_info.append(info)
 
     return island_info
 
 
-def __parse_island(bm, face_idx, faces_left, island,
-                   face_to_verts, vert_to_faces):
+def __parse_island(bm, face_idx, faces_left, island, face_to_verts, vert_to_faces):
     """
     Parse island
     """
@@ -538,7 +545,7 @@ def __parse_island(bm, face_idx, faces_left, island,
         fidx = faces_to_parse.pop(0)
         if fidx in faces_left:
             faces_left.remove(fidx)
-            island.append({'face': bm.faces[fidx]})
+            island.append({"face": bm.faces[fidx]})
             for v in face_to_verts[fidx]:
                 connected_faces = vert_to_faces[v]
                 for cf in connected_faces:
@@ -555,8 +562,9 @@ def __get_island(bm, face_to_verts, vert_to_faces):
     while faces_left:
         current_island = []
         face_idx = list(faces_left)[0]
-        __parse_island(bm, face_idx, faces_left, current_island,
-                       face_to_verts, vert_to_faces)
+        __parse_island(
+            bm, face_idx, faces_left, current_island, face_to_verts, vert_to_faces
+        )
         uv_island_lists.append(current_island)
 
     return uv_island_lists
@@ -667,12 +675,12 @@ def calc_tris_3d_area(points):
 
 def get_faces_list(bm, method, only_selected):
     faces_list = []
-    if method == 'MESH':
+    if method == "MESH":
         if only_selected:
             faces_list.append([f for f in bm.faces if f.select])
         else:
             faces_list.append([f for f in bm.faces])
-    elif method == 'UV ISLAND':
+    elif method == "UV ISLAND":
         if not bm.loops.layers.uv:
             return None
         uv_layer = bm.loops.layers.uv.verify()
@@ -686,7 +694,7 @@ def get_faces_list(bm, method, only_selected):
             islands = get_island_info_from_faces(bm, faces, uv_layer)
             for isl in islands:
                 faces_list.append([f["face"] for f in isl["faces"]])
-    elif method == 'FACE':
+    elif method == "FACE":
         if only_selected:
             for f in bm.faces:
                 if f.select:
@@ -759,8 +767,8 @@ def find_texture_nodes_from_material(mtrl):
         return nodes
     for node in mtrl.node_tree.nodes:
         tex_node_types = [
-            'TEX_ENVIRONMENT',
-            'TEX_IMAGE',
+            "TEX_ENVIRONMENT",
+            "TEX_IMAGE",
         ]
         if node.type not in tex_node_types:
             continue
@@ -826,9 +834,9 @@ def measure_all_faces_uv_area(bm, uv_layer):
     return areas
 
 
-def measure_uv_area_from_faces(obj, bm, faces, uv_layer, tex_layer,
-                               tex_selection_method, tex_size):
-
+def measure_uv_area_from_faces(
+    obj, bm, faces, uv_layer, tex_layer, tex_selection_method, tex_size
+):
     face_areas = measure_all_faces_uv_area(bm, uv_layer)
 
     uv_area = 0.0
@@ -839,61 +847,64 @@ def measure_uv_area_from_faces(obj, bm, faces, uv_layer, tex_layer,
         f_uv_area = face_areas[f]
 
         # user specified
-        if tex_selection_method == 'USER_SPECIFIED' and tex_size is not None:
+        if tex_selection_method == "USER_SPECIFIED" and tex_size is not None:
             img_size = tex_size
         # first texture if there are more than 2 textures assigned
         # to the object
-        elif tex_selection_method == 'FIRST':
+        elif tex_selection_method == "FIRST":
             img = find_image(obj, f, tex_layer)
             # can not find from node, so we can not get texture size
             if not img:
                 return None
             img_size = img.size
         # average texture size
-        elif tex_selection_method == 'AVERAGE':
+        elif tex_selection_method == "AVERAGE":
             imgs = find_images(obj, f, tex_layer)
             if not imgs:
                 return None
 
             img_size_total = [0.0, 0.0]
             for img in imgs:
-                img_size_total = [img_size_total[0] + img.size[0],
-                                  img_size_total[1] + img.size[1]]
-            img_size = [img_size_total[0] / len(imgs),
-                        img_size_total[1] / len(imgs)]
+                img_size_total = [
+                    img_size_total[0] + img.size[0],
+                    img_size_total[1] + img.size[1],
+                ]
+            img_size = [img_size_total[0] / len(imgs), img_size_total[1] / len(imgs)]
         # max texture size
-        elif tex_selection_method == 'MAX':
+        elif tex_selection_method == "MAX":
             imgs = find_images(obj, f, tex_layer)
             if not imgs:
                 return None
 
             img_size_max = [-99999999.0, -99999999.0]
             for img in imgs:
-                img_size_max = [max(img_size_max[0], img.size[0]),
-                                max(img_size_max[1], img.size[1])]
+                img_size_max = [
+                    max(img_size_max[0], img.size[0]),
+                    max(img_size_max[1], img.size[1]),
+                ]
             img_size = img_size_max
         # min texture size
-        elif tex_selection_method == 'MIN':
+        elif tex_selection_method == "MIN":
             imgs = find_images(obj, f, tex_layer)
             if not imgs:
                 return None
 
             img_size_min = [99999999.0, 99999999.0]
             for img in imgs:
-                img_size_min = [min(img_size_min[0], img.size[0]),
-                                min(img_size_min[1], img.size[1])]
+                img_size_min = [
+                    min(img_size_min[0], img.size[0]),
+                    min(img_size_min[1], img.size[1]),
+                ]
             img_size = img_size_min
         else:
-            raise RuntimeError("Unexpected method: {}"
-                               .format(tex_selection_method))
+            raise RuntimeError("Unexpected method: {}".format(tex_selection_method))
 
         uv_area += f_uv_area * img_size[0] * img_size[1]
 
     return uv_area
 
 
-def measure_uv_area(obj, calc_method, tex_selection_method,
-                    tex_size, only_selected):
+def measure_uv_area(obj, calc_method, tex_selection_method, tex_size, only_selected):
     bm = bmesh.from_edit_mesh(obj.data)
     if check_version(2, 73, 0) >= 0:
         bm.verts.ensure_lookup_table()
@@ -910,8 +921,8 @@ def measure_uv_area(obj, calc_method, tex_selection_method,
     uv_areas = []
     for faces in faces_list:
         uv_area = measure_uv_area_from_faces(
-            obj, bm, faces, uv_layer, tex_layer,
-            tex_selection_method, tex_size)
+            obj, bm, faces, uv_layer, tex_layer, tex_selection_method, tex_size
+        )
         if uv_area is None:
             return None
         uv_areas.append(uv_area)
@@ -1029,8 +1040,8 @@ def __sort_loop_pairs(uv_layer, pairs, closed):
         diff = p2[0][uv_layer].uv - p1[-1][uv_layer].uv
         if diff.length > 0.000000001:
             # UVs are separated
-            sorted_pairs = tmp_pairs[i + 1:]
-            sorted_pairs.extend(tmp_pairs[:i + 1])
+            sorted_pairs = tmp_pairs[i + 1 :]
+            sorted_pairs.extend(tmp_pairs[: i + 1])
             break
     else:
         p1 = tmp_pairs[0]
@@ -1046,12 +1057,12 @@ def __sort_loop_pairs(uv_layer, pairs, closed):
 # get index of the island group which includes loop
 def __get_island_group_include_loop(loop, island_info):
     for i, isl in enumerate(island_info):
-        for f in isl['faces']:
-            for l in f['face'].loops:
+        for f in isl["faces"]:
+            for l in f["face"].loops:
                 if l == loop:
-                    return i    # found
+                    return i  # found
 
-    return -1   # not found
+    return -1  # not found
 
 
 # get index of the island group which includes pair.
@@ -1059,12 +1070,12 @@ def __get_island_group_include_loop(loop, island_info):
 def __get_island_group_include_pair(pair, island_info):
     l1_grp = __get_island_group_include_loop(pair[0], island_info)
     if l1_grp == -1:
-        return -1   # not found
+        return -1  # not found
 
     for p in pair[1:]:
         l2_grp = __get_island_group_include_loop(p, island_info)
         if (l2_grp == -1) or (l1_grp != l2_grp):
-            return -1   # not found or invalid
+            return -1  # not found or invalid
 
     return l1_grp
 
@@ -1131,14 +1142,16 @@ def __get_loop_sequence_internal(uv_layer, pairs, island_info, closed):
         while True:
             nlp = __get_next_loop_pair(p)
             if not nlp:
-                break       # no more loop pair
+                break  # no more loop pair
             nlp_isl_grp = __get_island_group_include_pair(nlp, island_info)
             if nlp_isl_grp != isl_grp:
-                break       # another island
+                break  # another island
             for nlpl in nlp:
                 if nlpl[uv_layer].select:
-                    return None, "Do not select UV which does not belong to " \
-                                 "the end edge"
+                    return (
+                        None,
+                        "Do not select UV which does not belong to " "the end edge",
+                    )
 
             seqs.append(nlp)
 
@@ -1148,10 +1161,10 @@ def __get_loop_sequence_internal(uv_layer, pairs, island_info, closed):
 
             nplp = __get_next_poly_loop_pair(nlp)
             if not nplp:
-                break       # no more loop pair
+                break  # no more loop pair
             nplp_isl_grp = __get_island_group_include_pair(nplp, island_info)
             if nplp_isl_grp != isl_grp:
-                break       # another island
+                break  # another island
 
             # check if the UVs are already parsed.
             # this check is needed for the mesh which has the circular
@@ -1159,8 +1172,9 @@ def __get_loop_sequence_internal(uv_layer, pairs, island_info, closed):
             matched = False
             for p1 in seqs:
                 p2 = nplp
-                if ((p1[0] == p2[0]) and (p1[1] == p2[1])) or \
-                   ((p1[0] == p2[1]) and (p1[1] == p2[0])):
+                if ((p1[0] == p2[0]) and (p1[1] == p2[1])) or (
+                    (p1[0] == p2[1]) and (p1[1] == p2[0])
+                ):
                     matched = True
             if matched:
                 debug_print("This is a circular sequence")
@@ -1168,8 +1182,10 @@ def __get_loop_sequence_internal(uv_layer, pairs, island_info, closed):
 
             for nlpl in nplp:
                 if nlpl[uv_layer].select:
-                    return None, "Do not select UV which does not belong to " \
-                                 "the end edge"
+                    return (
+                        None,
+                        "Do not select UV which does not belong to " "the end edge",
+                    )
 
             seqs.append(nplp)
 
@@ -1198,8 +1214,9 @@ def get_loop_sequences(bm, uv_layer, closed=False):
     loop_pairs, err = __sort_loop_pairs(uv_layer, loop_pairs, closed)
     if not loop_pairs:
         return None, err
-    loop_seqs, err = __get_loop_sequence_internal(uv_layer, loop_pairs,
-                                                  isl_info, closed)
+    loop_seqs, err = __get_loop_sequence_internal(
+        uv_layer, loop_pairs, isl_info, closed
+    )
     if not loop_seqs:
         return None, err
 
@@ -1224,8 +1241,9 @@ def __is_segment_intersect(start1, end1, start2, end2):
     seg2_line1_start = a1 * start2.x + b1 * start2.y + d1
     seg2_line1_end = a1 * end2.x + b1 * end2.y + d1
 
-    if (seg1_line2_start * seg1_line2_end >= 0) or \
-            (seg2_line1_start * seg2_line1_end >= 0):
+    if (seg1_line2_start * seg1_line2_end >= 0) or (
+        seg2_line1_start * seg2_line1_end >= 0
+    ):
         return False, None
 
     u = seg1_line2_start / (seg1_line2_start - seg1_line2_end)
@@ -1292,9 +1310,7 @@ class RingBuffer:
 
 # clip: reference polygon
 # subject: tested polygon
-def __do_weiler_atherton_cliping(clip_uvs, subject_uvs, mode,
-                                 same_polygon_threshold):
-
+def __do_weiler_atherton_cliping(clip_uvs, subject_uvs, mode, same_polygon_threshold):
     clip_uvs = RingBuffer(clip_uvs)
     if __is_polygon_flipped(clip_uvs):
         clip_uvs.reverse()
@@ -1333,13 +1349,13 @@ def __do_weiler_atherton_cliping(clip_uvs, subject_uvs, mode,
             uv_end1 = clip_uvs.get(1)
             uv_start2 = subject_uvs.get()
             uv_end2 = subject_uvs.get(1)
-            intersected, point = __is_segment_intersect(uv_start1, uv_end1,
-                                                        uv_start2, uv_end2)
+            intersected, point = __is_segment_intersect(
+                uv_start1, uv_end1, uv_start2, uv_end2
+            )
             if intersected:
                 clip_uvs.insert(point, 1)
                 subject_uvs.insert(point, 1)
-                intersections.append([point,
-                                      [clip_uvs.get(), clip_uvs.get(1)]])
+                intersections.append([point, [clip_uvs.get(), clip_uvs.get(1)]])
             subject_uvs.next()
             if subject_uvs.get() == subject_uvs.head():
                 break
@@ -1399,7 +1415,7 @@ def __do_weiler_atherton_cliping(clip_uvs, subject_uvs, mode,
     #        * Show Mode is "Part"
     #       so for now, ignore this situation
     if len(subject_entering) != len(subject_exiting):
-        if mode == 'FACE':
+        if mode == "FACE":
             polygons = [subject_uvs.as_list()]
             return True, polygons
         return False, None
@@ -1455,8 +1471,14 @@ def __do_weiler_atherton_cliping(clip_uvs, subject_uvs, mode,
     current_uv = current_entering[0]
 
     while True:
-        current_uv = traverse(current_uv_list, current_entering,
-                              current_exiting, poly, current_uv, other_uv_list)
+        current_uv = traverse(
+            current_uv_list,
+            current_entering,
+            current_exiting,
+            poly,
+            current_uv,
+            other_uv_list,
+        )
 
         if current_uv is None:
             break
@@ -1479,8 +1501,12 @@ def __do_weiler_atherton_cliping(clip_uvs, subject_uvs, mode,
         debug_print(subject_entering)
         debug_print(subject_exiting)
 
-        if not clip_entering and not clip_exiting \
-                and not subject_entering and not subject_exiting:
+        if (
+            not clip_entering
+            and not clip_exiting
+            and not subject_entering
+            and not subject_exiting
+        ):
             break
 
     polygons.append(poly)
@@ -1521,8 +1547,7 @@ def __is_point_in_polygon(point, subject_points):
         if uv_start1.x == uv_start2.x and uv_start1.y == uv_start2.y:
             return False
 
-        intersected, _ = __is_segment_intersect(uv_start1, uv_end1,
-                                                uv_start2, uv_end2)
+        intersected, _ = __is_segment_intersect(uv_start1, uv_end1, uv_start2, uv_end2)
         if intersected:
             count = count + 1
 
@@ -1542,8 +1567,9 @@ def get_uv_editable_objects(context):
     if check_version(2, 80, 0) < 0:
         objs = []
     else:
-        objs = [o for o in bpy.data.objects
-                if get_object_select(o) and o.type == 'MESH']
+        objs = [
+            o for o in bpy.data.objects if get_object_select(o) and o.type == "MESH"
+        ]
 
     ob = context.active_object
     if ob is not None:
@@ -1553,8 +1579,9 @@ def get_uv_editable_objects(context):
     return objs
 
 
-def get_overlapped_uv_info(bm_list, faces_list, uv_layer_list,
-                           mode, same_polygon_threshold=0.0000001):
+def get_overlapped_uv_info(
+    bm_list, faces_list, uv_layer_list, mode, same_polygon_threshold=0.0000001
+):
     # at first, check island overlapped
     isl = []
     for bm, uv_layer, faces in zip(bm_list, uv_layer_list, faces_list):
@@ -1565,9 +1592,13 @@ def get_overlapped_uv_info(bm_list, faces_list, uv_layer_list,
     overlapped_uv_layer_pairs = []
     overlapped_bm_paris = []
     for i, (i1, uv_layer_1, bm_1) in enumerate(isl):
-        for i2, uv_layer_2, bm_2 in isl[i + 1:]:
-            if (i1["max"].x < i2["min"].x) or (i2["max"].x < i1["min"].x) or \
-               (i1["max"].y < i2["min"].y) or (i2["max"].y < i1["min"].y):
+        for i2, uv_layer_2, bm_2 in isl[i + 1 :]:
+            if (
+                (i1["max"].x < i2["min"].x)
+                or (i2["max"].x < i1["min"].x)
+                or (i1["max"].y < i2["min"].y)
+                or (i2["max"].y < i1["min"].y)
+            ):
                 continue
             overlapped_isl_pairs.append([i1, i2])
             overlapped_uv_layer_pairs.append([uv_layer_1, uv_layer_2])
@@ -1575,9 +1606,9 @@ def get_overlapped_uv_info(bm_list, faces_list, uv_layer_list,
 
     # check polygon overlapped (inter UV islands)
     overlapped_uvs = []
-    for oip, uvlp, bmp in zip(overlapped_isl_pairs,
-                              overlapped_uv_layer_pairs,
-                              overlapped_bm_paris):
+    for oip, uvlp, bmp in zip(
+        overlapped_isl_pairs, overlapped_uv_layer_pairs, overlapped_bm_paris
+    ):
         for clip in oip[0]["faces"]:
             f_clip = clip["face"]
             clip_uvs = [l[uvlp[0]].uv.copy() for l in f_clip.loops]
@@ -1585,26 +1616,32 @@ def get_overlapped_uv_info(bm_list, faces_list, uv_layer_list,
                 f_subject = subject["face"]
 
                 # fast operation, apply bounding box algorithm
-                if (clip["max_uv"].x < subject["min_uv"].x) or \
-                   (subject["max_uv"].x < clip["min_uv"].x) or \
-                   (clip["max_uv"].y < subject["min_uv"].y) or \
-                   (subject["max_uv"].y < clip["min_uv"].y):
+                if (
+                    (clip["max_uv"].x < subject["min_uv"].x)
+                    or (subject["max_uv"].x < clip["min_uv"].x)
+                    or (clip["max_uv"].y < subject["min_uv"].y)
+                    or (subject["max_uv"].y < clip["min_uv"].y)
+                ):
                     continue
 
                 subject_uvs = [l[uvlp[1]].uv.copy() for l in f_subject.loops]
                 # slow operation, apply Weiler-Atherton cliping algorithm
-                result, polygons = \
-                    __do_weiler_atherton_cliping(clip_uvs, subject_uvs,
-                                                 mode, same_polygon_threshold)
+                result, polygons = __do_weiler_atherton_cliping(
+                    clip_uvs, subject_uvs, mode, same_polygon_threshold
+                )
                 if result:
-                    overlapped_uvs.append({"clip_bmesh": bmp[0],
-                                           "subject_bmesh": bmp[1],
-                                           "clip_face": f_clip,
-                                           "subject_face": f_subject,
-                                           "clip_uv_layer": uvlp[0],
-                                           "subject_uv_layer": uvlp[1],
-                                           "subject_uvs": subject_uvs,
-                                           "polygons": polygons})
+                    overlapped_uvs.append(
+                        {
+                            "clip_bmesh": bmp[0],
+                            "subject_bmesh": bmp[1],
+                            "clip_face": f_clip,
+                            "subject_face": f_subject,
+                            "clip_uv_layer": uvlp[0],
+                            "subject_uv_layer": uvlp[1],
+                            "subject_uvs": subject_uvs,
+                            "polygons": polygons,
+                        }
+                    )
 
     # check polygon overlapped (intra UV island)
     for info, uv_layer, bm in isl:
@@ -1620,26 +1657,32 @@ def get_overlapped_uv_info(bm_list, faces_list, uv_layer_list,
                 f_subject = subject["face"]
 
                 # fast operation, apply bounding box algorithm
-                if (clip["max_uv"].x < subject["min_uv"].x) or \
-                   (subject["max_uv"].x < clip["min_uv"].x) or \
-                   (clip["max_uv"].y < subject["min_uv"].y) or \
-                   (subject["max_uv"].y < clip["min_uv"].y):
+                if (
+                    (clip["max_uv"].x < subject["min_uv"].x)
+                    or (subject["max_uv"].x < clip["min_uv"].x)
+                    or (clip["max_uv"].y < subject["min_uv"].y)
+                    or (subject["max_uv"].y < clip["min_uv"].y)
+                ):
                     continue
 
                 subject_uvs = [l[uv_layer].uv.copy() for l in f_subject.loops]
                 # slow operation, apply Weiler-Atherton cliping algorithm
-                result, polygons = \
-                    __do_weiler_atherton_cliping(clip_uvs, subject_uvs,
-                                                 mode, same_polygon_threshold)
+                result, polygons = __do_weiler_atherton_cliping(
+                    clip_uvs, subject_uvs, mode, same_polygon_threshold
+                )
                 if result:
-                    overlapped_uvs.append({"clip_bmesh": bm,
-                                           "subject_bmesh": bm,
-                                           "clip_face": f_clip,
-                                           "subject_face": f_subject,
-                                           "clip_uv_layer": uv_layer,
-                                           "subject_uv_layer": uv_layer,
-                                           "subject_uvs": subject_uvs,
-                                           "polygons": polygons})
+                    overlapped_uvs.append(
+                        {
+                            "clip_bmesh": bm,
+                            "subject_bmesh": bm,
+                            "clip_face": f_clip,
+                            "subject_face": f_subject,
+                            "clip_uv_layer": uv_layer,
+                            "subject_uv_layer": uv_layer,
+                            "subject_uvs": subject_uvs,
+                            "polygons": polygons,
+                        }
+                    )
 
     return overlapped_uvs
 
@@ -1651,11 +1694,15 @@ def get_flipped_uv_info(bm_list, faces_list, uv_layer_list):
             polygon = RingBuffer([l[uv_layer].uv.copy() for l in f.loops])
             if __is_polygon_flipped(polygon):
                 uvs = [l[uv_layer].uv.copy() for l in f.loops]
-                flipped_uvs.append({"bmesh": bm,
-                                    "face": f,
-                                    "uv_layer": uv_layer,
-                                    "uvs": uvs,
-                                    "polygons": [polygon.as_list()]})
+                flipped_uvs.append(
+                    {
+                        "bmesh": bm,
+                        "face": f,
+                        "uv_layer": uv_layer,
+                        "uvs": uvs,
+                        "polygons": [polygon.as_list()],
+                    }
+                )
 
     return flipped_uvs
 
@@ -1687,15 +1734,15 @@ def _is_uv_loop_connected(l1, l2, uv_layer):
 
 def create_uv_graph(loops, uv_layer):
     # For looking up faster.
-    loop_index_to_loop = {}     # { loop index: loop }
+    loop_index_to_loop = {}  # { loop index: loop }
     for l in loops:
         loop_index_to_loop[l.index] = l
 
     # Setup relationship between uv_vert and loops.
     # uv_vert is a representative of the loops which shares same
     # UV coordinate.
-    uv_vert_to_loops = {}   # { uv_vert: loops belonged to uv_vert }
-    loop_to_uv_vert = {}    # { loop: uv_vert belonged to }
+    uv_vert_to_loops = {}  # { uv_vert: loops belonged to uv_vert }
+    loop_to_uv_vert = {}  # { loop: uv_vert belonged to }
     for l in loops:
         found = False
         for k in uv_vert_to_loops.keys():
@@ -1709,7 +1756,7 @@ def create_uv_graph(loops, uv_layer):
             loop_to_uv_vert[l] = l
 
     # Collect adjacent uv_vert.
-    uv_adj_verts = {}       # { uv_vert: adj uv_vert list }
+    uv_adj_verts = {}  # { uv_vert: adj uv_vert list }
     for v, vs in uv_vert_to_loops.items():
         uv_adj_verts[v] = []
         for ll in vs:
@@ -1722,9 +1769,7 @@ def create_uv_graph(loops, uv_layer):
     # Setup uv_vert graph.
     graph = Graph()
     for v in uv_adj_verts.keys():
-        graph.add_node(
-            Node(v.index, {"uv_vert": v, "loops": uv_vert_to_loops[v]})
-        )
+        graph.add_node(Node(v.index, {"uv_vert": v, "loops": uv_vert_to_loops[v]}))
     edges = []
     for v, adjs in uv_adj_verts.items():
         n1 = graph.get_node(v.index)
@@ -1739,84 +1784,91 @@ def create_uv_graph(loops, uv_layer):
 
     return graph
 
+
 def getUvData():
     selected_object = bpy.context.view_layer.objects.active
     mode = selected_object.mode
-    
-    if hasattr(selected_object.data,"uv_layers") and hasattr(selected_object.data.uv_layers, "active") and selected_object.data.uv_layers.active:
-        uv_layer = selected_object.data.uv_layers.active.data
-    else:
+
+    if not (
+        hasattr(selected_object.data, "uv_layers")
+        and hasattr(selected_object.data.uv_layers, "active")
+        and selected_object.data.uv_layers.active
+    ):
         print("does not have UV data.")
-        uv_layer = None
         return []
+
     print(mode)
     bm = None
-    if mode == 'EDIT':
+    if mode == "EDIT":
         print(mode)
         bm = bmesh.from_edit_mesh(selected_object.data)
     else:
         print(mode)
         bm = bmesh.new()
         bm.from_mesh(selected_object.data)
-    
+
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
     # pprint(bm.faces)
-    data = get_island_info_from_bmesh(bm,True)
+    data = get_island_info_from_bmesh(bm, True)
 
-    list = []    
+    list = []
     uv_lay = bm.loops.layers.uv.active
-        
+
     for d in data:
-        fcs = d['faces']
+        fcs = d["faces"]
         for f in fcs:
             valid = True
             loops = []
-            for u in f['face'].loops:                
-                if not u[uv_lay].select : 
+            for u in f["face"].loops:
+                if not u[uv_lay].select:
                     valid = False
                 else:
-                    loop = [u[uv_lay].uv[0],1-u[uv_lay].uv[1]]
+                    loop = [u[uv_lay].uv[0], 1 - u[uv_lay].uv[1]]
                     loops.append(loop)
-            if valid: list.append(loops)
+            if valid:
+                list.append(loops)
     return list
+
 
 def getUvOverlay():
     selected_object = bpy.context.view_layer.objects.active
     mode = selected_object.mode
-    
-    if hasattr(selected_object.data,"uv_layers") and hasattr(selected_object.data.uv_layers, "active") and selected_object.data.uv_layers.active:
-        uv_layer = selected_object.data.uv_layers.active.data
-    else:
+
+    if not (
+        hasattr(selected_object.data, "uv_layers")
+        and hasattr(selected_object.data.uv_layers, "active")
+        and selected_object.data.uv_layers.active
+    ):
         print("does not have UV data.")
-        uv_layer = None
         return []
+
     print(mode)
     bm = None
-    if mode == 'EDIT':
+    if mode == "EDIT":
         print(mode)
         bm = bmesh.from_edit_mesh(selected_object.data)
     else:
         print(mode)
         bm = bmesh.new()
         bm.from_mesh(selected_object.data)
-    
+
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
     # pprint(bm.faces)
-    data = get_island_info_from_bmesh(bm,False)
+    data = get_island_info_from_bmesh(bm, False)
 
     list = []
-    uv_lay = bm.loops.layers.uv.active
-        
+    uv_layer = bm.loops.layers.uv.active
+
     for d in data:
-        fcs = d['faces']
+        fcs = d["faces"]
         for f in fcs:
             loops = []
-            for u in f['face'].loops:                
-                loop = [u[uv_lay].uv[0],1-u[uv_lay].uv[1]]
+            for u in f["face"].loops:
+                loop = [u[uv_layer].uv[0], 1 - u[uv_layer].uv[1]]
                 loops.append(loop)
             list.append(loops)
     return list
