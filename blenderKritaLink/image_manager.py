@@ -1,6 +1,6 @@
 import bpy
 import numpy as np
-
+import time
 class ImageManager:
     INSTANCE = None
 
@@ -11,11 +11,15 @@ class ImageManager:
     
     def mirror_image(self, image_pixels):
         print("hello from mirror_image")
+        t = time.time() 
         image = self.get_image()
         if not image or "IMAGE UV_TEST".find(image.type) == -1:
             print("object is not image. ", self.IMAGE_NAME, "  type:", image.type)
             return
-        print("hello from mirror_image")
+        
+        image.source = 'GENERATED'# possibly bad, possibly good for performance
+        
+        print("hello from mirror_image",time.time()-t)
         width = image.size[0]
         height = image.size[1]
         print(
@@ -37,7 +41,7 @@ class ImageManager:
         pixels_reshaped = image_pixels.reshape((height, width, 4))
 
         mirrored_pixels = np.flipud(pixels_reshaped).flatten()
-        print("hello from mirror_image", len(mirrored_pixels), len(pixels_reshaped))
+        print("hello from mirror_image", len(mirrored_pixels), len(pixels_reshaped),time.time()-t)
         print(mirrored_pixels[0], mirrored_pixels[1], type(mirrored_pixels[0]))
 
         if isinstance(mirrored_pixels[0], np.uint16):
@@ -51,16 +55,18 @@ class ImageManager:
 
         image.pixels.foreach_set(mirrored_pixels.astype(np.float32))
 
-        print("hello from mirror_image")
+        print("hello from mirror_image",time.time()-t)
         print(f"Image mirrored{image.name}")
         for obj in bpy.context.scene.objects:
             obj.update_tag()
-        print("hello from mirror_image")
+        print("hello from mirror_image",time.time()-t)
 
-        if image.is_float:
+        if image.is_float:#I dont know what it is anymore
             image.pack()
             image.alpha_mode = "PREMUL"
             image.alpha_mode = "STRAIGHT"
+        print("hello from mirror_image, packed, alfa changed ",time.time()-t)
+        
 
     def update_image(self, bytes_array):
         image = self.get_image()

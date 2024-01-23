@@ -1,4 +1,4 @@
-from BlenderKritaLink.connection import KritaConnection
+from blenderKritaLink.connection import KritaConnection
 import bpy 
 
 def prop_update(self,context):
