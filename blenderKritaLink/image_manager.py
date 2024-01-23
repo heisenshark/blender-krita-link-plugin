@@ -16,9 +16,7 @@ class ImageManager:
         if not image or "IMAGE UV_TEST".find(image.type) == -1:
             print("object is not image. ", self.IMAGE_NAME, "  type:", image.type)
             return
-        
-        image.source = 'GENERATED'# possibly bad, possibly good for performance
-        
+                
         print("hello from mirror_image",time.time()-t)
         width = image.size[0]
         height = image.size[1]
