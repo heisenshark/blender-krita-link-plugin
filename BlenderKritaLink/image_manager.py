@@ -1,6 +1,8 @@
 import bpy
 import numpy as np
-from pprint import pprint
+import time
+
+
 class ImageManager:
     INSTANCE = None
 
@@ -8,14 +10,16 @@ class ImageManager:
         if not ImageManager.INSTANCE:
             self.IMAGE_NAME = None
             ImageManager.INSTANCE = self
-    
+
     def mirror_image(self, image_pixels):
         print("hello from mirror_image")
+        t = time.time()
         image = self.get_image()
         if not image or "IMAGE UV_TEST".find(image.type) == -1:
             print("object is not image. ", self.IMAGE_NAME, "  type:", image.type)
             return
-        print("hello from mirror_image")
+
+        print("hello from mirror_image", time.time() - t)
         width = image.size[0]
         height = image.size[1]
         print(
@@ -26,7 +30,7 @@ class ImageManager:
             height,
         )
 
-        image_pixels = image_pixels.reshape(width * height,4)
+        image_pixels = image_pixels.reshape(width * height, 4)
 
         if isinstance(image_pixels[0][0], np.uint16) or isinstance(
             image_pixels[0][0], np.uint8
@@ -37,7 +41,12 @@ class ImageManager:
         pixels_reshaped = image_pixels.reshape((height, width, 4))
 
         mirrored_pixels = np.flipud(pixels_reshaped).flatten()
-        print("hello from mirror_image", len(mirrored_pixels), len(pixels_reshaped))
+        print(
+            "hello from mirror_image",
+            len(mirrored_pixels),
+            len(pixels_reshaped),
+            time.time() - t,
+        )
         print(mirrored_pixels[0], mirrored_pixels[1], type(mirrored_pixels[0]))
 
         if isinstance(mirrored_pixels[0], np.uint16):
@@ -51,16 +60,17 @@ class ImageManager:
 
         image.pixels.foreach_set(mirrored_pixels.astype(np.float32))
 
-        print("hello from mirror_image")
+        print("hello from mirror_image", time.time() - t)
         print(f"Image mirrored{image.name}")
         for obj in bpy.context.scene.objects:
             obj.update_tag()
-        print("hello from mirror_image")
+        print("hello from mirror_image", time.time() - t)
 
-        if image.is_float:
+        if image.is_float:  # I dont know what it is anymore
             image.pack()
             image.alpha_mode = "PREMUL"
             image.alpha_mode = "STRAIGHT"
+        print("hello from mirror_image, packed, alfa changed ", time.time() - t)
 
     def update_image(self, bytes_array):
         image = self.get_image()
@@ -77,37 +87,9 @@ class ImageManager:
         if not self.IMAGE_NAME:
             return None
         return bpy.data.images[self.IMAGE_NAME]
-    
-    def get_image_from_name(self,name):
+
+    def get_image_from_name(self, name):
         return bpy.data.images[name]
-    
-
-
-    def get_image_to_krita(self, image, krita_format):
-        image = bpy.data.images[image["name"]]
-        print("dupa")
-        if image == None: #TODO error handling
-            return {}
-        print("dupa ", krita_format)
-        
-        # if krita_format != "F32" and krita_format !="F16":
-        #     return
-        print("dupa")
-
-
-
-        d = [0.0] * len(image.pixels)
-        print("dupa",len(d))
-        image.pixels.foreach_get(d)
-        print("dupa")
-        pprint(d[0:10])
-        return image
-        # depth = image_data.depth
-        # channels = image_data.channels
-
-        # krita_format = 8
-        # pixels_array = np.array()
-
 
     def set_image_name(self, name: str | None):
         self.IMAGE_NAME = name
