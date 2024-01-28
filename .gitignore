@@ -5,6 +5,7 @@
 !/blenderKritaLink
 !/KritaBlenderLink
 !cppPart
+!ruff.toml
 /KritaBlenderLink/__pycache__
 !KritaBlenderLink.desktop
 **/__pycache__
