@@ -49,7 +49,7 @@ class MessageListener:
 
 
 class ConnectionManager:
-    adress = 6000
+    port = 65431
     connection = None
     shm = None
     listeners: list[MessageListener] = []
@@ -68,9 +68,9 @@ class ConnectionManager:
         return next(filter(lambda x: x["isActive"], self.images), None)
 
     def change_adress(self, adr):
-        self.adress = adr
+        self.port = adr
 
-    def connect(self, canvas_bytes_len, on_connect, on_disconnect):
+    def connect(self, on_connect, on_disconnect):
         self.on_disconnect = on_disconnect
         self.linked_document = None
         if self.connection:
@@ -79,7 +79,7 @@ class ConnectionManager:
             print(self.connection)
 
         def thread():
-            with Client(("localhost", self.adress), authkey=b"2137") as connection:
+            with Client(("localhost", self.port), authkey=b"2137") as connection:
                 print("client created")
                 self.connection = connection
                 on_connect()

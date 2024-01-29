@@ -31,7 +31,7 @@ The plugin consists of two parts: one for Blender and one for Krita.
 - If "Send on draw" is activated, the image will update in Blender when you release the draw button on the canvas (and use ctrl+(Shift)+Z). You can also send data manually using the "Send Data" button.
 - Use `Refresh Images` to update image data from Blender.
 - Use `Get UV Overlay` to get the UV map from selected object(in blender) to krita.
-  - you can also change color of uv maps 
+  - you can also change color of uv maps and their visibility
 
 ## UVselectAddition Installation
 - The UV selection command requires compiling UVselectAddition.
