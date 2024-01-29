@@ -129,10 +129,7 @@ class BlenderKritaLink(DockWidget):
         MessageListener("GET_UV_OVERLAY", self.handle_uv_overlay)
 
     def connect_blender(self):
-        doc = Krita.instance().activeDocument()
-        pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
         self.connection.connect(
-            len(pixelBytes),
             self.on_blender_connected,
             lambda: (
                 self.central_widget.ConnectionStatus.setText(
@@ -141,7 +138,6 @@ class BlenderKritaLink(DockWidget):
                 ImageList.instance.clear_signal.emit(),
             ),
         )
-        print("bytes count: ", len(pixelBytes))
         win = Krita.instance().activeWindow().qwindow()
         if not self.avc_connected:
             win.activeViewChanged.connect(self.active_view_changed)

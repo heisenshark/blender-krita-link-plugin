@@ -27,7 +27,7 @@ def shared_memory_context(name: str, size: int, destroy: bool, create=bool):
 
 
 class KritaConnection:
-    PORT = 6000
+    PORT = 65431
     PASS = b"2137"
     LINK_INSTANCE = None
     STATUS: str
