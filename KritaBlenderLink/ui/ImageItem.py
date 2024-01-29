@@ -10,11 +10,12 @@ from krita import Krita
 
 
 class ImageItem(QWidget):
-    def __init__(self, image, on_open, on_override, parent=None):
+    def __init__(self, image, on_open, on_override,on_unlink, parent=None):
         super().__init__(parent)
         self.image = image
         self.on_open = on_open
         self.on_override = on_override
+        self.on_unlink = on_unlink
         height = 0
         width = 0
         dir(Krita)
@@ -68,8 +69,13 @@ class ImageItem(QWidget):
         cmenu = QMenu(self)
 
         cmenu.addSection(self.image["name"])
+        
         openAct = cmenu.addAction("From Blender To new Layer")
         linkImageAct = cmenu.addAction("Link Image")
+        unlinkImageAct = cmenu.addAction("Unlink Image")
+
+        unlinkImageAct.setDisabled(not self.image["isActive"])
+        linkImageAct.setDisabled(self.image["isActive"])
 
         if (
             hasattr(Krita, "instance")
@@ -81,13 +87,18 @@ class ImageItem(QWidget):
             width = document.width()
 
         if not (self.image_size[0] == width and self.image_size[1] == height):
+            unlinkImageAct.setDisabled(True)
             linkImageAct.setDisabled(True)
-
+        
         action = cmenu.exec_(self.mapToGlobal(event.pos()))
         print(action)
+        
         if action == linkImageAct:
             print("link selected")
             self.on_override(self.image)
+        elif action == unlinkImageAct:
+            print("unlinking image")
+            self.on_unlink()
         elif action == openAct:
-            self.on_open(self.image)
             print("from blender to krita selected")
+            self.on_open(self.image)

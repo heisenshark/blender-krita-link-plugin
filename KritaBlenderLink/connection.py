@@ -137,7 +137,6 @@ class ConnectionManager:
             self.shm.unlink()
             self.shm = None
 
-        asyncio.run(self.request({"type": "CLOSE_MEMORY", "data": ""}))
         try:
             self.shm = shared_memory.SharedMemory(
                 name="krita-blender", create=True, size=canvas_bytes_len
@@ -148,7 +147,6 @@ class ConnectionManager:
             self.shm = shared_memory.SharedMemory(
                 name="krita-blender", create=False, size=canvas_bytes_len
             )
-        asyncio.run(self.request({"type": "RECREATE_MEMORY", "data": ""}))
 
     def send_message(self, message):
         if self.connection:
