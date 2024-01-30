@@ -1,3 +1,4 @@
+from krita import Extension
 from threading import Timer, Thread
 import os as os
 import asyncio
@@ -33,6 +34,19 @@ class ClickFilter(QObject):
         return super().eventFilter(obj, event)
 
 
+
+class BlenderKritaLinkExtension(Extension):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def setup(self):
+        pass
+    
+    def createActions(self, window):
+        print("eluwa wluwerjawklejriojefojiosdf")
+        action = window.createAction('sendImage', 'send image to blender', 'tools/scripts/BlenderKritaLink')
+        action2 = window.createAction('sendImage')
+        action2.triggered.connect(lambda x: print("dupa"))
 class BlenderKritaLink(DockWidget):
     listen_to_canvas_change = True
     connection = None
@@ -235,6 +249,7 @@ class BlenderKritaLink(DockWidget):
         Krita.instance().action("image_properties").trigger()
 
     def select_uvs(self):
+        # if self.connection.
         uvs = asyncio.run(self.connection.request({"type": "SELECT_UVS"}))
         print(format_message(uvs))
 
