@@ -8,6 +8,8 @@ This plugin offers a seamless way to edit Blender images in Krita without the ne
 - Selects UV faces in Blender (they must be selected in both edit mode and UV editor; this feature requires the C++ plugin).
 - Transfers UV maps from selected objects in Blender to Krita.
 
+![demo](demo.gif)
+
 ## Installation
 
 The plugin consists of two parts: one for Blender and one for Krita.

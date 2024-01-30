@@ -6,6 +6,7 @@
 !/KritaBlenderLink
 !cppPart
 !ruff.toml
+!demo.gif
 /KritaBlenderLink/__pycache__
 !KritaBlenderLink.desktop
 **/__pycache__

@@ -312,6 +312,8 @@ def change_memory(conn_manager: ConnectionManager):
 
 def format_message(msg: object):
     """function that removes data if "noshow" flag is present, useful for not clogging terminal"""
+    if msg is None:
+        return {}
     if hasattr(msg, "noshow") or "noshow" in msg:
         return {
             "type": msg["type"],
