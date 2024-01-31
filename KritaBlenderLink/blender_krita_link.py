@@ -17,8 +17,39 @@ from krita import Krita, DockWidget, Notifier
 from PyQt5.QtWidgets import QColorDialog
 from PyQt5.QtCore import QObject, QEvent
 from PyQt5.QtGui import QColor
+import time
 
 DOCKER_TITLE = "Blender Krita Link"
+
+
+class Debouncer:
+    def __init__(self, fn, time, non_debounced=lambda: None) -> None:
+        self.fn = fn
+        self.time = time
+        self.last_time = 0
+        self.finished = True
+        self.non_debounced = non_debounced
+
+    def cal(self):
+        time_now = time.time()
+        print("cal called", time_now, time.time())
+        self.non_debounced()
+        if time_now - self.last_time > self.time:
+
+            def execute():
+                if self.finished:
+                    self.finished = False
+                    self.last_time = time_now
+                    self.fn()
+                    self.finished = True
+                    print("finished", time_now, time.time())
+
+            if self.finished:
+                execute()
+                return
+
+            t = Timer(self.time, execute)
+            t.start()
 
 
 class ClickFilter(QObject):
@@ -34,27 +65,27 @@ class ClickFilter(QObject):
         return super().eventFilter(obj, event)
 
 
-
 class BlenderKritaLinkExtension(Extension):
     def __init__(self, parent):
         super().__init__(parent)
 
     def setup(self):
         pass
-    
+
     def createActions(self, window):
-        print("eluwa wluwerjawklejriojefojiosdf")
-        action = window.createAction('sendImage', 'send image to blender', 'tools/scripts/BlenderKritaLink')
-        action2 = window.createAction('sendImage')
-        action2.triggered.connect(lambda x: print("dupa"))
+        window.createAction("sendImage")
+        window.createAction("refreshUVs")
+        window.createAction("UVsToggleOnOff")
+
+
 class BlenderKritaLink(DockWidget):
     listen_to_canvas_change = True
     connection = None
-    advancedRefresh = 0  # 0 1 2 0-off 1-on 2-full
+    advancedRefresh = 2  # 0 1 2 0-off 1-on 2-full
 
     def __init__(self):
         super().__init__()
-
+        print("Docker init!!!")
         print(Settings.getSetting("listenCanvas"))
         self.connection = ConnectionManager()
         self.avc_connected = False
@@ -62,7 +93,7 @@ class BlenderKritaLink(DockWidget):
             lambda x: [change_memory(self.connection), print("image file changed")]
         )
         ImageState.instance.onPixelsChange.connect(
-            lambda x: self.on_update_image() and print("drawed smh")
+            lambda x: self.on_update_image(x) and print("drawed smh")
         )
         app_notifier: Notifier = Krita.instance().notifier()
 
@@ -116,21 +147,34 @@ class BlenderKritaLink(DockWidget):
         self.central_widget.UVColorButton.setStyleSheet(
             f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
         )
+
+        self.select_uvs_debouncer = Debouncer(self.select_uvs, 0.2)
+        self.uv_overlay_debouncer = Debouncer(
+            self.get_uv_overlay, 0.2, self.attach_uv_viewer
+        )
+        self.send_pixels_debouncer = Debouncer(self.send_pixels, 0.2)
+
         # self.centralWidget.UVColorButton.clicked.connect(openColorDialog)
         self.central_widget.UVColorButton.installEventFilter(self.filter)
-
         self.central_widget.ConnectButton.clicked.connect(self.connect_blender)
         self.central_widget.DisconnectButton.clicked.connect(self.connection.disconnect)
-        self.central_widget.SendDataButton.clicked.connect(self.send_pixels)
+        self.central_widget.SendDataButton.clicked.connect(
+            self.send_pixels_debouncer.cal
+        )
         self.central_widget.RefreshImagesButton.clicked.connect(self.get_image_data)
         self.central_widget.ImageTosRGBButton.clicked.connect(self.image_to_srgb)
-        self.central_widget.SelectUVIslandsButton.clicked.connect(self.select_uvs)
-        self.central_widget.UVOverlayButton.clicked.connect(self.get_uv_overlay)
+        self.central_widget.SelectUVIslandsButton.clicked.connect(
+            self.select_uvs_debouncer.cal
+        )
+        self.central_widget.UVOverlayButton.clicked.connect(
+            self.uv_overlay_debouncer.cal
+        )
 
         ImageList(parent=self.central_widget.ImagesFrame, con_manager=self.connection)
         self.central_widget.ImagesFrame.layout().addWidget(ImageList.instance)
 
         app_notifier.viewCreated.connect(self.attach_uv_viewer)
+        app_notifier.viewCreated.connect(self.attach_shortcuts_listeners)
 
         print(self.central_widget, self.central_widget.ConnectButton)
         print(
@@ -138,9 +182,28 @@ class BlenderKritaLink(DockWidget):
                 os.path.dirname(os.path.realpath(__file__)), "BlenderKritaLinkUI.ui"
             )
         )
-
+        self.last_send_pixels_time = 0
         MessageListener("SELECT_UVS", self.handle_uv_response)
         MessageListener("GET_UV_OVERLAY", self.handle_uv_overlay)
+
+    def attach_shortcuts_listeners(self):
+        print("onviewcreated, attaching shortcuts listeners...")
+
+        def uv_show_toggle(_):
+            toggled_state = not Settings.getSetting("showUVs")
+            Settings.setSetting("showUVs", toggled_state)
+            self.central_widget.ShowUVCheckbox.setCheckState(2 if toggled_state else 0)
+            for uo in UvOverlay.INSTANCES_SET:
+                if not sip.isdeleted(uo):
+                    uo.update()
+
+        Krita.instance().action("UVsToggleOnOff").triggered.connect(uv_show_toggle)
+        Krita.instance().action("sendImage").triggered.connect(
+            self.send_pixels_debouncer.cal
+        )
+        Krita.instance().action("refreshUVs").triggered.connect(
+            self.uv_overlay_debouncer.cal
+        )
 
     def connect_blender(self):
         self.connection.connect(
@@ -149,6 +212,7 @@ class BlenderKritaLink(DockWidget):
                 self.central_widget.ConnectionStatus.setText(
                     "Connection status: blender disconnected",
                 ),
+                UvOverlay.set_polygons([]),
                 ImageList.instance.clear_signal.emit(),
             ),
         )
@@ -173,9 +237,10 @@ class BlenderKritaLink(DockWidget):
     def refresh_document(self, doc):
         root_node = doc.rootNode()
         if root_node and len(root_node.childNodes()) > 0:
-            test_layer = doc.createNode("DELME", "paintLayer")
-            root_node.addChildNode(test_layer, root_node.childNodes()[0])
-            test_layer.remove()
+            root_node.setBlendingMode(root_node.blendingMode())
+            # test_layer = doc.createNode("DELME", "paintLayer")
+            # root_node.addChildNode(test_layer, root_node.childNodes()[0])
+            # test_layer.remove()
 
     def send_pixels(self):
         doc = Krita.instance().activeDocument()
@@ -209,12 +274,15 @@ class BlenderKritaLink(DockWidget):
         print("draw Listen changed", checked)
         Settings.setSetting("listenCanvas", checked == 2)
 
-    def on_update_image(self):
+    def on_update_image(self, x):
         print(Settings.getSetting("listenCanvas"))
         if not Settings.getSetting("listenCanvas"):
             return
-        t = Timer(0.25, self.send_pixels)
-        t.start()
+        if x["paint"]:
+            self.send_pixels_debouncer.cal()
+        else:
+            t = Timer(0.25, self.send_pixels_debouncer.cal)
+            t.start()
 
     def canvasChanged(self, canvas):
         print("something Happened")
@@ -249,12 +317,10 @@ class BlenderKritaLink(DockWidget):
         Krita.instance().action("image_properties").trigger()
 
     def select_uvs(self):
-        # if self.connection.
         uvs = asyncio.run(self.connection.request({"type": "SELECT_UVS"}))
         print(format_message(uvs))
 
     def get_uv_overlay(self):
-        self.attach_uv_viewer()
         asyncio.run(self.connection.request({"type": "GET_UV_OVERLAY"}))
 
     def handle_uv_response(self, message):
