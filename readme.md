@@ -7,8 +7,12 @@ This plugin offers a seamless way to edit Blender images in Krita without the ne
 - Imports Blender textures as new layers.
 - Selects UV faces in Blender (they must be selected in both edit mode and UV editor; this feature requires the C++ plugin).
 - Transfers UV maps from selected objects in Blender to Krita.
+- Offers Shortcuts for sending image, toggling uvs and getting uvs.
+
+![panel](panel.png)
 
 ![demo](demo.gif)
+
 
 ## Installation
 
@@ -41,8 +45,7 @@ The plugin consists of two parts: one for Blender and one for Krita.
 - Place `uv-select` from `cppPart` in the `krita>plugins` directory.
 - Create an AppImage as per tutorials.
 - Extract libraries and action files to your Krita installation as described in this [repository](https://github.com/Acly/krita-ai-tools).
-- Note: Building on Windows hasn't been tested.
-
+- 
 UVSelectionAddition is not required for the Python plugin to work but offers additional features.
 
 ### Disclaimer

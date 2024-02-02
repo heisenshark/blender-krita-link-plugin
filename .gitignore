@@ -7,6 +7,7 @@
 !cppPart
 !ruff.toml
 !demo.gif
+!panel.png
 /KritaBlenderLink/__pycache__
 !KritaBlenderLink.desktop
 **/__pycache__
