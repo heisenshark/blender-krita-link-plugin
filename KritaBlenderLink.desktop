@@ -5,4 +5,4 @@ X-KDE-Library=KritaBlenderLink
 X-Python-2-Compatible=false
 X-Krita-Manual=Manual.html
 Name=KritaBlenderLink
-Comment=Getting a docker set up
+Comment=Plugin for linking one krita image to blender texture

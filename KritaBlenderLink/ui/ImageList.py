@@ -40,7 +40,7 @@ class ImageList(QListWidget):
             "GET_IMAGES",
             lambda message: ImageList.instance.refresh_signal.emit(message["data"]),
         )
-
+    
     def update_images_list(self, images_list):
         print("update time")
         self.clear_images_list()
@@ -53,6 +53,7 @@ class ImageList(QListWidget):
                     image, self.conn_manager
                 ),
                 on_override=lambda image: override_image(image, self.conn_manager),
+                on_unlink=self.conn_manager.remove_link,
                 parent=self.scrollAreaWidgetContents,
             )
             listItem.setSizeHint(item.sizeHint())

@@ -2,15 +2,40 @@
 <!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
-<!--BBD's Krita Script Starter, Feb 2018 -->
-<head><title>favorite_actions</title>
-</head>
-<body>
-<h3>favorite_actions</h3>
-Tell people about what your script does here.
-This is an html document so you can format it with html tags.
-<h3>Usage</h3>
-Tell people how to use your script here.
 
+<head>
+    <title>Blender Krita Link</title>
+</head>
+
+<body>
+    <h3>Blender Krita Link Plugin</h3>
+    <h4>Features</h4>
+    <ul>
+        <li>Links Blender textures with Krita files.</li>
+        <li>Imports Blender textures as new layers.</li>
+        <li>Selects UV faces in Blender (they must be selected in both edit mode and UV editor; this feature requires
+            the C++ plugin).</li>
+        <li>Transfers UV maps from selected objects in Blender to Krita. </li>
+        <li>Offers Shortcuts for sending image, toggling uvs and getting uvs. </li>
+    </ul>
+
+    <h3>Usage</h3>
+    <ul>
+        <li>Use the <code>connect</code> button to link to Blender, or <code>disconnect</code> to end your session.</li>
+        <li>The plugin loads images from Blender into a list. Link an image by right-clicking it and selecting
+            <code>link image</code>, or import a texture by clicking <code>from blender to new layer</code>.</li>
+        <li>To enable linking, ensure the Krita document is the same size as the Blender image. Set the correct color
+            spectrum under <code>Image &gt; Properties &gt; Image Color Space</code> (RGB/Alpha and Profile: sRGB are
+            recommended).</li>
+        <li>If &quot;Send on draw&quot; is activated, the image will update in Blender when you release the draw button
+            on the canvas (and use ctrl+(Shift)+Z). You can also send data manually using the &quot;Send Data&quot;
+            button.</li>
+        <li>Use <code>Refresh Images</code> to update image data from Blender.</li>
+        <li>Use <code>Get UV Overlay</code> to get the UV map from selected object(in blender) to krita.<ul>
+                <li>you can also change color of uv maps </li>
+            </ul>
+        </li>
+    </ul>
 </body>
+
 </html>

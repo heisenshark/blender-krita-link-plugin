@@ -49,7 +49,7 @@ class MessageListener:
 
 
 class ConnectionManager:
-    adress = 6000
+    port = 65431
     connection = None
     shm = None
     listeners: list[MessageListener] = []
@@ -68,9 +68,9 @@ class ConnectionManager:
         return next(filter(lambda x: x["isActive"], self.images), None)
 
     def change_adress(self, adr):
-        self.adress = adr
+        self.port = adr
 
-    def connect(self, canvas_bytes_len, on_connect, on_disconnect):
+    def connect(self, on_connect, on_disconnect):
         self.on_disconnect = on_disconnect
         self.linked_document = None
         if self.connection:
@@ -79,7 +79,7 @@ class ConnectionManager:
             print(self.connection)
 
         def thread():
-            with Client(("localhost", self.adress), authkey=b"2137") as connection:
+            with Client(("localhost", self.port), authkey=b"2137") as connection:
                 print("client created")
                 self.connection = connection
                 on_connect()
@@ -137,7 +137,6 @@ class ConnectionManager:
             self.shm.unlink()
             self.shm = None
 
-        asyncio.run(self.request({"type": "CLOSE_MEMORY", "data": ""}))
         try:
             self.shm = shared_memory.SharedMemory(
                 name="krita-blender", create=True, size=canvas_bytes_len
@@ -148,7 +147,6 @@ class ConnectionManager:
             self.shm = shared_memory.SharedMemory(
                 name="krita-blender", create=False, size=canvas_bytes_len
             )
-        asyncio.run(self.request({"type": "RECREATE_MEMORY", "data": ""}))
 
     def send_message(self, message):
         if self.connection:
@@ -314,6 +312,8 @@ def change_memory(conn_manager: ConnectionManager):
 
 def format_message(msg: object):
     """function that removes data if "noshow" flag is present, useful for not clogging terminal"""
+    if msg is None:
+        return {}
     if hasattr(msg, "noshow") or "noshow" in msg:
         return {
             "type": msg["type"],

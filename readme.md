@@ -7,6 +7,12 @@ This plugin offers a seamless way to edit Blender images in Krita without the ne
 - Imports Blender textures as new layers.
 - Selects UV faces in Blender (they must be selected in both edit mode and UV editor; this feature requires the C++ plugin).
 - Transfers UV maps from selected objects in Blender to Krita.
+- Offers Shortcuts for sending image, toggling uvs and getting uvs.
+
+![panel](panel.png)
+
+![demo](demo.gif)
+
 
 ## Installation
 
@@ -31,7 +37,7 @@ The plugin consists of two parts: one for Blender and one for Krita.
 - If "Send on draw" is activated, the image will update in Blender when you release the draw button on the canvas (and use ctrl+(Shift)+Z). You can also send data manually using the "Send Data" button.
 - Use `Refresh Images` to update image data from Blender.
 - Use `Get UV Overlay` to get the UV map from selected object(in blender) to krita.
-  - you can also change color of uv maps 
+  - you can also change color of uv maps and their visibility
 
 ## UVselectAddition Installation
 - The UV selection command requires compiling UVselectAddition.
@@ -39,8 +45,7 @@ The plugin consists of two parts: one for Blender and one for Krita.
 - Place `uv-select` from `cppPart` in the `krita>plugins` directory.
 - Create an AppImage as per tutorials.
 - Extract libraries and action files to your Krita installation as described in this [repository](https://github.com/Acly/krita-ai-tools).
-- Note: Building on Windows hasn't been tested.
-
+- 
 UVSelectionAddition is not required for the Python plugin to work but offers additional features.
 
 ### Disclaimer
