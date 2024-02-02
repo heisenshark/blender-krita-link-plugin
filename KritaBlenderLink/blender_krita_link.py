@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import QColorDialog
 from PyQt5.QtCore import QObject, QEvent
 from PyQt5.QtGui import QColor
 import time
+import pprint
 
 DOCKER_TITLE = "Blender Krita Link"
 
@@ -38,12 +39,14 @@ class Debouncer:
 
             def execute():
                 if self.finished:
-                    self.finished = False
-                    self.last_time = time_now
-                    self.fn()
-                    self.finished = True
-                    print("finished", time_now, time.time())
-
+                    try:
+                        self.finished = False
+                        self.last_time = time_now
+                        self.fn()
+                    finally:
+                        self.finished = True
+                        print("finished", time_now, time.time())
+                    
             if self.finished:
                 execute()
                 return
@@ -81,7 +84,7 @@ class BlenderKritaLinkExtension(Extension):
 class BlenderKritaLink(DockWidget):
     listen_to_canvas_change = True
     connection = None
-    advancedRefresh = 2  # 0 1 2 0-off 1-on 2-full
+    advancedRefresh = 0 # 0 1 2 0-off 1-on 2-full
 
     def __init__(self):
         super().__init__()
