@@ -1833,7 +1833,15 @@ def getUvData():
 
 
 def getUvOverlay():
+    selected_objects = bpy.context.view_layer.objects.selected
+    list = []
+    for obj in selected_objects:
+        data = getUvFromObject2(obj)
+        for d in data:
+            list.append(d)
+    return list
 
+def getUvIslands():
     selected_objects = bpy.context.view_layer.objects.selected
     list = []
     for obj in selected_objects:
@@ -1869,10 +1877,12 @@ def getUvFromObject(selected_object):
     bm.faces.ensure_lookup_table()
     # pprint(bm.faces)
     data = get_island_info_from_bmesh(bm, True)
-
+    
+    print(data)
+    
     list = []
     uv_layer = bm.loops.layers.uv.active
-
+            
     for d in data:
         fcs = d["faces"]
         for f in fcs:
@@ -1882,3 +1892,104 @@ def getUvFromObject(selected_object):
                 loops.append(loop)
             list.append(loops)
     return list
+
+def getUvFromObject2(selected_object):
+    # selected_object = bpy.context.view_layer.objects.active
+    mode = selected_object.mode
+
+    if not (
+        hasattr(selected_object.data, "uv_layers")
+        and hasattr(selected_object.data.uv_layers, "active")
+        and selected_object.data.uv_layers.active
+    ):
+        print("does not have UV data.")
+        return []
+
+    print(mode)
+    bm = None
+    if mode == "EDIT":
+        print(mode)
+        bm = bmesh.from_edit_mesh(selected_object.data)
+    else:
+        print(mode)
+        bm = bmesh.new()
+        bm.from_mesh(selected_object.data)
+
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    # pprint(bm.faces)
+    # data = get_island_info_from_bmesh(bm, True)
+    only_selected = True
+    i_info = None
+    if not bm.loops.layers.uv:
+        i_info =  None
+    else:
+        uv_layer = bm.loops.layers.uv.verify()
+
+        # create database
+        if only_selected:
+            selected_faces = [f for f in bm.faces if f.select]
+        else:
+            selected_faces = [f for f in bm.faces]
+            
+        ftv, vtf = __create_vert_face_db(selected_faces, uv_layer)
+        # print(ftv,vtf)
+        # Get island information
+        uv_island_lists = __get_island(bm, ftv, vtf)
+        island_info = __get_island_info(uv_layer, uv_island_lists)
+
+        i_info =  island_info
+
+
+    end_list = []
+    uv_layer = bm.loops.layers.uv.active
+    # print(island_info)
+    for d in island_info:
+        fcs = d["faces"]
+        # faces = []
+        for f in fcs:
+            loops = []
+            for u in f["face"].loops:
+                loop = [u[uv_layer].uv[0], 1 - u[uv_layer].uv[1]]
+                loops.append(loop)
+            # faces.append(loops)
+            end_list.append(loops)
+    import shapely as sl
+    import time
+    sl.LinearRing
+    def polygons_to_vertices_array(polygon:sl.Polygon):
+        # Konwersja każdego poligonu na listę jego wierzchołków
+        # return polygon.exterior.coords
+        ext = sl.make_valid(polygon.exterior)
+        l = []
+        for p in ext.coords:
+            l.append([p[0],p[1]])
+        return l
+
+    def multipolygon_to_polygons_array(multipolygon):
+        # Sprawdzenie, czy obiekt jest 
+        multipolygon = sl.make_valid(multipolygon)
+        if isinstance(multipolygon, sl.MultiPolygon):
+            # Konwersja MultiPolygon na listę poligonów
+            return [polygons_to_vertices_array(polygon) for polygon in multipolygon.geoms]
+        elif isinstance(multipolygon, sl.Polygon):
+            # Jeśli to pojedynczy poligon, zwróć go jako element listy
+            return [polygons_to_vertices_array(multipolygon)]
+        else:
+            # Jeśli obiekt nie jest ani MultiPolygon, ani Polygon
+            raise TypeError("Obiekt nie jest typu MultiPolygon ani Polygon.")
+    t = time.time()
+    lygons = []
+    # mp = sl.MultiPolygon(end_list)
+    for f in end_list:
+        lygons.append(sl.make_valid(sl.Polygon(f)))
+    print("time: ", time.time() - t)
+    # mp = sl.make_valid(mp)
+    final = sl.union_all(lygons)
+    print("time: ", time.time() - t)
+    # print(final)
+    final_arr = multipolygon_to_polygons_array(final)
+    print("time: ", time.time() - t)
+    # print(final_arr)
+    return final_arr

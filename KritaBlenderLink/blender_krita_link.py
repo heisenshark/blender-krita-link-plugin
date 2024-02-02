@@ -336,9 +336,18 @@ class BlenderKritaLink(DockWidget):
         faces = message["data"]
         # UvOverlay.set_polygons(faces)
 
+        # testing stuff with dicts and stuff
+        # edges - map [k:(vert vert(sorted)), v:(num num (face indexes))]
+        # faces - map [k: num , v:(face face)]
+        
+        
+        # edge_map,polygon_list = polygon_to_edges_with_index(faces[0])
+        # pprint(faces)
+        
         if action is not None:
             print("action exists")
             for g in faces:
+                print(g)
                 for f in g:
                     f[0] *= width_height[0]
                     f[1] *= width_height[1]
@@ -349,3 +358,24 @@ class BlenderKritaLink(DockWidget):
     def handle_uv_overlay(self, message):
         print("handle_uv_overlay")
         UvOverlay.set_polygons(message["data"])
+def sorted_edge(v1,v2):
+    if v1[0] > v2[0] or v1[1] > v2[1]:
+        return [v1[0],v2[0]]
+    if v1[0] < v2[0] or v1[1] <= v2[1]:
+        return [v2[0],v1[0]]
+
+def polygon_to_edges_with_index(polygons):
+    edge_map = {}
+    polygon_list = []
+    for idp, p in enumerate(polygons):
+        polygon_list.append([])
+        polygon_list[idp].append(sorted_edge(p[0],p[len(polygons)-1]))
+        for i in range(1,len(polygons)):
+            e = sorted_edge(p[i-1],p[i])
+            if e in edge_map:
+                edge_map[e].append(idp)
+            polygon_list[idp].append(e)
+    
+    print(edge_map,polygon_list)
+    
+    return (edge_map,polygon_list)
