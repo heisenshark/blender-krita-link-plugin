@@ -71,13 +71,13 @@ class ImageState(QObject):
     def setup_listening(self):
         QtWidgets.qApp.installEventFilter(self)
 
-        Krita.instance().action("edit_undo").triggered.connect(
-            lambda x: self.onPixelsChange.emit(self.data)
-        )
+        def history_emit(_):
+            self.data["paint"] = False
+            self.onPixelsChange.emit(self.data)
 
-        Krita.instance().action("edit_redo").triggered.connect(
-            lambda x: self.onPixelsChange.emit(self.data)
-        )
+        Krita.instance().action("edit_undo").triggered.connect(history_emit)
+        Krita.instance().action("edit_redo").triggered.connect(history_emit)
+
         Krita.instance().action("file_open").triggered.connect(
             lambda x: self.check_color_profile()
         )
@@ -94,6 +94,7 @@ class ImageState(QObject):
         if isinstance(obj, QOpenGLWidget):
             if event.type() == 93 or (event.type() == 3 and event.button() == 1):
                 print(obj, type(obj).__bases__)
+                self.data["paint"] = True
                 self.onPixelsChange.emit(self.data)
                 # print("painted Something on", event.type(), event.button())
                 print("painted Something on")

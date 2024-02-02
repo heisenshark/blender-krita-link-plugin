@@ -1833,7 +1833,17 @@ def getUvData():
 
 
 def getUvOverlay():
-    selected_object = bpy.context.view_layer.objects.active
+
+    selected_objects = bpy.context.view_layer.objects.selected
+    list = []
+    for obj in selected_objects:
+        data = getUvFromObject(obj)
+        for d in data:
+            list.append(d)
+    return list
+
+def getUvFromObject(selected_object):
+    # selected_object = bpy.context.view_layer.objects.active
     mode = selected_object.mode
 
     if not (
@@ -1858,7 +1868,7 @@ def getUvOverlay():
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
     # pprint(bm.faces)
-    data = get_island_info_from_bmesh(bm, False)
+    data = get_island_info_from_bmesh(bm, True)
 
     list = []
     uv_layer = bm.loops.layers.uv.active

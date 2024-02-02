@@ -5,8 +5,11 @@ from .connection import KritaConnection
 
 bl_info = {
     "name": "Blender Krita link",
+    "author": "Heisenshark",
+    "version": (0, 1),
     "blender": (2, 80, 0),
-    "category": "Object",
+    "category": "Paint",
+    "description":"companion to blender krita link plugin, shows connection status and updates images"
 }
 
 
@@ -24,8 +27,7 @@ def update_panel_loop():
         bpy.context.scene.global_store.label = KritaConnection.STATUS
     except Exception as e:
         print(e)
-    finally:
-        return 0.5
+    return 0.5
 
 
 class GlobalStore(bpy.types.PropertyGroup):
