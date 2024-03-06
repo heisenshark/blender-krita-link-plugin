@@ -280,6 +280,13 @@ def blender_image_as_new_layer(image_object, conn_manager):
             )
             refresh_document(document)
 
+def open_as_new_document(image, conn_manager: ConnectionManager, link:bool = False):
+    x,y = image["size"]
+    newDocument = Krita.instance().createDocument(x, y, image["name"], "RGBA", "U8", "", 300.0)
+    Krita.instance().activeWindow().addView(newDocument)
+    blender_image_as_new_layer(image,conn_manager)
+    if link: 
+        override_image(image,conn_manager)  
 
 def change_memory(conn_manager: ConnectionManager):
     """function to resize memory if image data is changed"""
@@ -308,7 +315,6 @@ def change_memory(conn_manager: ConnectionManager):
     conn_manager.resize_memory(size[0] * size[1] * depth)
     asyncio.run(conn_manager.request({"data": active_image, "type": "OVERRIDE_IMAGE"}))
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
-
 
 def format_message(msg: object):
     """function that removes data if "noshow" flag is present, useful for not clogging terminal"""
