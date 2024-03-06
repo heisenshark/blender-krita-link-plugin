@@ -13,10 +13,9 @@ class ImageList(QListWidget):
     image_list = []
     refresh_signal = pyqtSignal(object)
     clear_signal = pyqtSignal()
-    instance = None
 
     def __init__(
-        self, con_manager: ConnectionManager, parent: QWidget | None = ...
+        self, con_manager: ConnectionManager, parent: QWidget
     ) -> None:
         ImageList.instance = self
         self.conn_manager = con_manager
@@ -49,12 +48,8 @@ class ImageList(QListWidget):
             listItem = QListWidgetItem(self)
             item = ImageItem(
                 image=image,
-                on_open=lambda image: blender_image_as_new_layer(
-                    image, self.conn_manager
-                ),
-                on_override=lambda image: override_image(image, self.conn_manager),
-                on_unlink=self.conn_manager.remove_link,
                 parent=self.scrollAreaWidgetContents,
+                conn_manager=self.conn_manager
             )
             listItem.setSizeHint(item.sizeHint())
             self.addItem(listItem)

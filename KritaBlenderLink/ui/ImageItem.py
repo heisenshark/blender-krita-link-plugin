@@ -7,15 +7,13 @@ from PyQt5.QtWidgets import (
     QMenu,
 )
 from krita import Krita
-
+from KritaBlenderLink.connection import ConnectionManager, blender_image_as_new_layer, open_as_new_document, override_image
 
 class ImageItem(QWidget):
-    def __init__(self, image, on_open, on_override,on_unlink, parent=None):
+    def __init__(self, image,conn_manager: ConnectionManager, parent=None):
         super().__init__(parent)
         self.image = image
-        self.on_open = on_open
-        self.on_override = on_override
-        self.on_unlink = on_unlink
+        self.conn_manager = conn_manager
         height = 0
         width = 0
         dir(Krita)
@@ -73,7 +71,11 @@ class ImageItem(QWidget):
         openAct = cmenu.addAction("From Blender To new Layer")
         linkImageAct = cmenu.addAction("Link Image")
         unlinkImageAct = cmenu.addAction("Unlink Image")
-
+        openAsNewDocumentLinkAct = cmenu.addAction("Open in new Document and link")
+        openAsNewDocumentAct = cmenu.addAction("Open in new document")
+        
+        if unlinkImageAct is None or linkImageAct is None:
+            return
         unlinkImageAct.setDisabled(not self.image["isActive"])
         linkImageAct.setDisabled(self.image["isActive"])
 
@@ -92,13 +94,19 @@ class ImageItem(QWidget):
         
         action = cmenu.exec_(self.mapToGlobal(event.pos()))
         print(action)
-        
         if action == linkImageAct:
             print("link selected")
-            self.on_override(self.image)
+            override_image(self.image,self.conn_manager) 
         elif action == unlinkImageAct:
             print("unlinking image")
-            self.on_unlink()
+            self.conn_manager.remove_link()
         elif action == openAct:
             print("from blender to krita selected")
-            self.on_open(self.image)
+            blender_image_as_new_layer(self.image,self.conn_manager)
+        elif action == openAsNewDocumentAct:
+            open_as_new_document(self.image,self.conn_manager)
+            print("dupa") 
+        elif action == openAsNewDocumentLinkAct:
+            open_as_new_document(self.image,self.conn_manager,True)
+            print("dupa") 
+            pass
