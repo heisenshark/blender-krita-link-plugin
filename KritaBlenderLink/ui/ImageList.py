@@ -4,8 +4,6 @@ from .ImageItem import ImageItem
 from KritaBlenderLink.connection import (
     ConnectionManager,
     MessageListener,
-    override_image,
-    blender_image_as_new_layer,
 )
 
 
