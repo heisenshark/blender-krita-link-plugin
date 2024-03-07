@@ -232,8 +232,11 @@ class BlenderKritaLink(DockWidget):
         Thread(target=self.get_image_data).start()
 
     def get_image_data(self):
-        if self.connection.connection is None:
-            return
+        if self.connection is None or self.connection.connection is None:
+            return 
+        print("get_image_data log:  ",self.connection.linked_document, self.connection.linked_document in Krita.instance().documents())
+        if self.connection.linked_document not in Krita.instance().documents():
+            self.connection.remove_link()
         images = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
         ImageList.instance.refresh_signal.emit(images["data"])
 

@@ -39,8 +39,10 @@ class ImageItem(QWidget):
         self.label_9.setObjectName("label_9")
 
         if "isActive" in image and image["isActive"]:
-            self.label_9.setStyleSheet("font-weight: bold; color: green;")
-
+            if conn_manager.linked_document == Krita.instance().activeDocument(): 
+                self.label_9.setStyleSheet("font-weight: bold; color: green;")
+            else:
+                self.label_9.setStyleSheet("font-weight: bold; color: #003300;")
         self.image_size = image["size"]
         if not (self.image_size[0] == width and self.image_size[1] == height):
             self.label_9.setStyleSheet("color: red;")
