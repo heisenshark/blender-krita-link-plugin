@@ -1,3 +1,4 @@
+from KritaBlenderLink.settings import Settings
 from krita import Krita
 from threading import Thread
 from multiprocessing import shared_memory
@@ -59,6 +60,7 @@ class ConnectionManager:
     images = []
 
     def __init__(self) -> None:
+        ConnectionManager.port = Settings.getSetting("port")
         MessageListener("GET_IMAGES", lambda message: self.set_images(message["data"]))
 
     def set_images(self, images):
@@ -77,7 +79,7 @@ class ConnectionManager:
             return
         else:
             print(self.connection)
-
+        print(f"connecting to {self.port}")
         def thread():
             with Client(("localhost", self.port), authkey=b"2137") as connection:
                 print("client created")
@@ -88,7 +90,7 @@ class ConnectionManager:
                         message_available = self.connection.poll(0.5)
                         if not message_available:
                             continue
-                        if self.connection.closed:
+                        if self.connection is None or self.connection.closed:
                             break
                         message = self.connection.recv()
                         if message == "close":
@@ -199,7 +201,8 @@ class ConnectionManager:
         return None
 
 
-def override_image(image, conn_manager):
+# on link function, here the shm is created
+def override_image(image, conn_manager: ConnectionManager): 
     doc = Krita.instance().activeDocument()
     depth = int(doc.colorDepth()[1:]) // 2
     size = [doc.width(), doc.height()]

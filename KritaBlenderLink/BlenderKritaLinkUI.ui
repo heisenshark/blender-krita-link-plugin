@@ -89,6 +89,20 @@ border: 3px solid #8f8f91;
     </layout>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>connection port: </string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="connection_port"/>
+     </item>
+    </layout>
+   </item>
+   <item>
     <widget class="QFrame" name="ImagesFrame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
