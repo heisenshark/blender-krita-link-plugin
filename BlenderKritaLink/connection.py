@@ -3,6 +3,7 @@ from threading import Thread, Event
 from multiprocessing import shared_memory
 import bpy
 import numpy as np
+
 from .image_manager import ImageManager
 from .uv_extractor import getUvData, getUvOverlay
 from pprint import pprint
@@ -30,7 +31,9 @@ class KritaConnection:
     PORT = 65431
     PASS = b"2137"
     LINK_INSTANCE = None
-    STATUS: str
+    STATUS: str = "listening"
+    CONNECTION = None
+    listener = None
 
     def __init__(self) -> None:
         if not KritaConnection.LINK_INSTANCE:
@@ -48,6 +51,15 @@ class KritaConnection:
                 ("localhost", KritaConnection.PORT), authkey=b"2137"
             ) as connection:
                 self.__STOP_SIGNAL.set()
+                connection.send("close")
+
+    def timeout_listener(self):
+        if self.listener is not None:
+            print("accepting")
+            with Client(
+                ("localhost", KritaConnection.PORT), authkey=b"2137"
+            ) as connection:
+                # self.__STOP_SIGNAL.set()
                 connection.send("close")
 
     def start(self):
@@ -73,7 +85,7 @@ class KritaConnection:
         d = ImageManager.INSTANCE.get_image_from_name(
             msg["data"]["image"]["name"]
         )
-        print("siema z powodzeniem pobrano rzeczy")
+        print("hello, successfully got things")
         if d is None:
             return
 
@@ -300,7 +312,6 @@ class KritaConnection:
             KritaConnection.CONNECTION = conn
             print("connection accepted")
             ImageManager.INSTANCE.set_image_name(None)
-
             try:
                 self.update_message("connected")
                 while not self.__STOP_SIGNAL.isSet():

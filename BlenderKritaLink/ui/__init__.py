@@ -15,7 +15,8 @@ class _PT_BlenderKritaLinkPanel(bpy.types.Panel):
     bl_region_type = "UI"
     bl_category = "Blender Krita Link"
     INSTANCE = None
-    my_string:bpy.props.StringProperty(name="test_prop",default="listening",update=prop_update)
+    # my_string:bpy.props.StringProperty(name="test_prop",default="listening",update=prop_update)
+    # connection_port:bpy.props.IntProperty(name="connection_port",default=12341,update=prop_update)
     
     def __init__(self) -> None:
         super().__init__()
@@ -26,4 +27,6 @@ class _PT_BlenderKritaLinkPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         layout.label(text="Connection: " + KritaConnection.STATUS)
+        layout.prop(bpy.context.scene.global_store, "connection_port")
+        layout.operator("object.disconnect_operator")
         print("redrawing panel...")
