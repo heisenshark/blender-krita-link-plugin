@@ -14,7 +14,7 @@ from .ui.ImageList import ImageList
 from .settings import Settings
 from .ImageState import ImageState
 from krita import Krita, DockWidget, Notifier
-from PyQt5.QtWidgets import QColorDialog, QLineEdit
+from PyQt5.QtWidgets import QColorDialog, QLineEdit, QSpinBox
 from PyQt5.QtCore import QObject, QEvent
 from PyQt5.QtGui import QColor
 import time
@@ -152,7 +152,12 @@ class BlenderKritaLink(DockWidget):
 
         def on_port_change(text):
             try:
-                ConnectionManager.port = int(text)
+                new_port = int(text)
+                print(f"{ConnectionManager.connection} {new_port} {ConnectionManager.port}")
+                if new_port != ConnectionManager.port:
+                    self.connection.disconnect()
+                    print("disconnecting")
+                ConnectionManager.port = new_port 
             except Exception:
                 ConnectionManager.port = 65431
             if ConnectionManager.port > 65533:
@@ -162,6 +167,14 @@ class BlenderKritaLink(DockWidget):
 
         self.central_widget.connection_port.setText(f"{ConnectionManager.port if Settings.getSetting('port') is None else Settings.getSetting('port')}")
         self.central_widget.connection_port.textChanged.connect(on_port_change)
+        
+        def on_width_change(number):
+            Settings.setSetting("uv_width",number)
+        
+        # QSpinBox().setValue(Settings.setSetting("uv_width"))
+        self.central_widget.uv_width.setValue(1 if Settings.getSetting("uv_width") is None else Settings.getSetting("uv_width"))
+        self.central_widget.uv_width.valueChanged.connect(on_width_change)
+
         self.select_uvs_debouncer = Debouncer(self.select_uvs, 0.2)
         self.uv_overlay_debouncer = Debouncer(
             self.get_uv_overlay, 0.2, self.attach_uv_viewer
