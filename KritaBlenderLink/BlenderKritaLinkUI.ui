@@ -50,14 +50,25 @@
     </widget>
    </item>
    <item>
-    <widget class="QCheckBox" name="SendOnDrawCheckbox">
-     <property name="text">
-      <string>Send on Draw</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <item>
+      <widget class="QCheckBox" name="SendOnDrawCheckbox">
+       <property name="text">
+        <string>Send on Draw</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="checkBox">
+       <property name="text">
+        <string>CheckBox</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <layout class="QHBoxLayout" name="horizontalLayout_6">
      <item>
       <widget class="QCheckBox" name="ShowUVCheckbox">
        <property name="text">
@@ -65,6 +76,17 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QCheckBox" name="checkBox_2">
+       <property name="text">
+        <string>CheckBox</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <item>
@@ -81,6 +103,23 @@ border: 3px solid #8f8f91;
         <widget class="QLabel" name="UVsColor">
          <property name="text">
           <string>Uvs Color</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="uv_width">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>10</number>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>width of uv stroke</string>
          </property>
         </widget>
        </item>

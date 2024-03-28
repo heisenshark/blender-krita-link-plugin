@@ -1,6 +1,7 @@
 # code heavily inspired from https://krita-artists.org/t/canvas-render-how-to/31540
 from __future__ import annotations
 
+from .settings import Settings
 from krita import Krita
 from PyQt5 import sip
 from PyQt5.QtCore import (
@@ -168,7 +169,7 @@ class UvOverlay(QWidget):
             document = view.document()
             zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
 
-            painter.setPen(QPen(UvOverlay.COLOR, 0.5 / zoom, Qt.SolidLine))
+            painter.setPen(QPen(UvOverlay.COLOR, 0.5 * Settings.getSetting("uv_width") / zoom, Qt.SolidLine))
             for p in self._polygons:
                 painter.drawPolygon(p)
 

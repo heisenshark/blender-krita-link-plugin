@@ -102,7 +102,7 @@ class ConnectionManager:
                     except Exception as e:
                         print("Error on reciving messages", e)
                         self.connection = None
-                        if self.shm and check_shared_memory_exists("krita-blender"):
+                        if self.shm and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)):
                             self.shm.unlink()
                             self.shm = None
                         break
@@ -114,7 +114,7 @@ class ConnectionManager:
 
     def disconnect(self):
         """gets called when user closes connection"""
-        if self.shm and check_shared_memory_exists("krita-blender"):
+        if self.shm and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)):
             self.shm.unlink()
         if self.connection:
             self.connection.close()
@@ -135,19 +135,19 @@ class ConnectionManager:
 
     def resize_memory(self, canvas_bytes_len):
         print("unlink")
-        if self.shm and check_shared_memory_exists("krita-blender"):
+        if self.shm and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)):
             self.shm.unlink()
             self.shm = None
 
         try:
             self.shm = shared_memory.SharedMemory(
-                name="krita-blender", create=True, size=canvas_bytes_len
+                name="krita-blender"+str(ConnectionManager.port), create=True, size=canvas_bytes_len
             )
             print("memory  created")
         except Exception:
             print("file exists, trying another way")
             self.shm = shared_memory.SharedMemory(
-                name="krita-blender", create=False, size=canvas_bytes_len
+                name="krita-blender"+str(ConnectionManager.port), create=False, size=canvas_bytes_len
             )
 
     def send_message(self, message):
@@ -258,7 +258,7 @@ def blender_image_as_new_layer(image_object, conn_manager):
         image_object["size"][0] * image_object["size"][1] * pixel_size * 4,
     )
     with shared_memory_context(
-        name="blender-krita",
+        name="blender-krita"+str(ConnectionManager.port),
         destroy=True,
         size=image_object["size"][0] * image_object["size"][1] * pixel_size * 4,
         create=True,

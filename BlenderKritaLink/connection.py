@@ -115,7 +115,7 @@ class KritaConnection:
             d.size[1] * bdepth * d.size[0],
         )
         with shared_memory_context(
-            name="blender-krita",
+            name="blender-krita"+str(KritaConnection.PORT),
             size=lenght * bdepth,
             destroy=False,
             create=False,
@@ -164,7 +164,7 @@ class KritaConnection:
         match type:
             case "REFRESH":
                 with shared_memory_context(
-                    name="krita-blender",
+                    name="krita-blender"+str(KritaConnection.PORT),
                     size=None,
                     destroy=False,
                     create=False,

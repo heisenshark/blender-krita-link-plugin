@@ -60,6 +60,10 @@ class DisconnectOperator(bpy.types.Operator):
     bl_idname = "object.disconnect_operator"
     bl_label = "Disconnect"
 
+    @classmethod
+    def pool(cls,context):
+        return KritaConnection.CONNECTION is not None
+
     def execute(self, context):
         if KritaConnection.CONNECTION is not None:
             KritaConnection.CONNECTION.close()
