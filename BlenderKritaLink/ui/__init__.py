@@ -29,4 +29,6 @@ class _PT_BlenderKritaLinkPanel(bpy.types.Panel):
         layout.label(text="Connection: " + KritaConnection.STATUS)
         layout.prop(bpy.context.scene.global_store, "connection_port")
         layout.operator("object.disconnect_operator")
-        print("redrawing panel...")
+        layout.prop(bpy.context.scene.global_store, "sync_toggle")
+        layout.prop(bpy.context.scene.global_store, "sync_interval")
+        # print("redrawing panel...")

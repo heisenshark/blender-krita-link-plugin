@@ -15,7 +15,7 @@ from .settings import Settings
 from .ImageState import ImageState
 from krita import Krita, DockWidget, Notifier
 from PyQt5.QtWidgets import QColorDialog, QLineEdit, QSpinBox
-from PyQt5.QtCore import QObject, QEvent
+from PyQt5.QtCore import QObject, QEvent, QTimer
 from PyQt5.QtGui import QColor
 import time
 
@@ -213,6 +213,11 @@ class BlenderKritaLink(DockWidget):
         MessageListener("SELECT_UVS", self.handle_uv_response)
         MessageListener("GET_UV_OVERLAY", self.handle_uv_overlay)
 
+        attach_watch = QTimer(self)
+        attach_watch.setInterval(300)
+        attach_watch.timeout.connect(self.attach_uv_viewer)
+        attach_watch.start()
+
     def attach_shortcuts_listeners(self):
         print("onviewcreated, attaching shortcuts listeners...")
 
@@ -330,14 +335,17 @@ class BlenderKritaLink(DockWidget):
         qv = get_q_view(active_view)
         if qv is None:
             return
-        print("active window: ", qv)
-        print(qv.findChild(UvOverlay))
         overlay = qv.findChild(UvOverlay, "UVOVERLAY")
+        # print("attach call!!!!")
+         
         if overlay is not None:
-            for ov in UvOverlay.INSTANCES_SET:
-                if not sip.isdeleted(ov):
-                    ov.update_stuff()
+            # for ov in UvOverlay.INSTANCES_SET:
+            #     if not sip.isdeleted(ov):
+            #         ov.update_stuff()
             return
+
+        # print("active window: ", qv)
+        # print(qv.findChild(UvOverlay))
         if active_view.document() is None:
             raise RuntimeError("Document of active view is None!")
         my_overlay = UvOverlay(active_view)
@@ -376,3 +384,6 @@ class BlenderKritaLink(DockWidget):
     def handle_uv_overlay(self, message):
         print("handle_uv_overlay")
         UvOverlay.set_polygons(message["data"])
+        for ov in UvOverlay.INSTANCES_SET:
+            if not sip.isdeleted(ov):
+                ov.update_stuff()

@@ -59,27 +59,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="checkBox">
-       <property name="text">
-        <string>CheckBox</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_6">
-     <item>
       <widget class="QCheckBox" name="ShowUVCheckbox">
        <property name="text">
         <string>Show UVs</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="checkBox_2">
-       <property name="text">
-        <string>CheckBox</string>
        </property>
       </widget>
      </item>
