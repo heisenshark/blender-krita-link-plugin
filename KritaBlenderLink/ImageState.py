@@ -49,7 +49,7 @@ class ImageState(QObject):
         self.instance.onSRGBColorSpace.emit(d["colorProfile"] == "sRGB")
 
     def compare_data(self, data1, data2):
-        print(data1, data2)
+        # print(data1, data2)
         self.check_color_profile()
         for key, value in data1.items():
             if key == "size":

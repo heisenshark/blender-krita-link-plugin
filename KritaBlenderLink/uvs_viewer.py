@@ -30,7 +30,7 @@ def ruler_correction():
     for c in pobj.children():
         if c.metaObject().className() == "KisView":
             view = c
-            print(c)
+            # print(c)
     x = 0
     y = 0
     for c in view.children():
@@ -41,7 +41,7 @@ def ruler_correction():
                 x = w
             if w >= h:
                 y = h
-    print(x, y)
+    # print(x, y)
     return [x, y]
 
 
@@ -127,7 +127,7 @@ class UvOverlay(QWidget):
         document = self.view.document()
         width = float(document.width())
         height = float(document.height())
-        print("doc", width, height)
+        # print("doc", width, height)
         self._polygons = []
 
         for p in UvOverlay.POLYGONS:
@@ -182,15 +182,15 @@ class UvOverlay(QWidget):
         return super().eventFilter(obj, e)
 
     def resize_handle(self):
-        print("resize !!!! ")
+        # print("resize !!!! ")
         q_canvas = self.parent().findChild(QAbstractScrollArea).viewport()
         x, y = ruler_correction()
-        print(
-            q_canvas.x(),
-            q_canvas.y(),
-            q_canvas.geometry().width(),
-            q_canvas.geometry().height(),
-        )
+        # print(
+        #     q_canvas.x(),
+        #     q_canvas.y(),
+        #     q_canvas.geometry().width(),
+        #     q_canvas.geometry().height(),
+        # )
         self.setGeometry(
             x, y, q_canvas.geometry().width(), q_canvas.geometry().height()
         )
@@ -204,7 +204,7 @@ class UvOverlay(QWidget):
                 pp.append([v[0], v[1]])
             UvOverlay.POLYGONS.append(pp)
 
-        print(UvOverlay.INSTANCES_SET)
+        # print(UvOverlay.INSTANCES_SET)
         for ov in UvOverlay.INSTANCES_SET:
             if not sip.isdeleted(ov):
                 ov.update_stuff()

@@ -1,4 +1,6 @@
 import bpy
+
+from BlenderKritaLink.watch import UvWatch,ImagesStateWatch
 from .ui import _PT_BlenderKritaLinkPanel
 from .image_manager import ImageManager
 from .connection import KritaConnection
@@ -50,10 +52,22 @@ class GlobalStore(bpy.types.PropertyGroup):
         update=ui_update,
     )
     connection_port: bpy.props.IntProperty(
-        name="connection_port",
+        name="connection port",
         description="port to connect to krita",
         default=65431,
         update=port_update,
+    )
+    sync_toggle: bpy.props.BoolProperty(
+        name="sync uvs and images",
+        description="toggle to sync uv preview and images at a interval",
+        default=True,
+    )
+    sync_interval: bpy.props.FloatProperty(
+        name="sync interval",
+        description="sync interval in seconds",
+        default=0.5,
+        min=0.2,
+        max=10
     )
 
 class DisconnectOperator(bpy.types.Operator): 
@@ -67,7 +81,7 @@ class DisconnectOperator(bpy.types.Operator):
     def execute(self, context):
         if KritaConnection.CONNECTION is not None:
             KritaConnection.CONNECTION.close()
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 def init_connection():
     print("init connection",bpy.context.scene.global_store.connection_port)
@@ -79,11 +93,15 @@ def register():
     bpy.utils.register_class(_PT_BlenderKritaLinkPanel)
     bpy.utils.register_class(GlobalStore)
     bpy.types.Scene.global_store = bpy.props.PointerProperty(type=GlobalStore)
-
     ImageManager()
     bpy.utils.register_class(DisconnectOperator)
     bpy.app.timers.register(update_panel_loop, persistent=True)
     bpy.app.timers.register(init_connection,first_interval=0.2,persistent=True)
+
+    UvWatch()
+    ImagesStateWatch()
+    bpy.app.timers.register(UvWatch.instance.check_for_changes, first_interval=0.5, persistent=True)
+    bpy.app.timers.register(ImagesStateWatch.instance.watch_images, first_interval=0.5, persistent=True)
 
 def unregister():
     KritaConnection.LINK_INSTANCE.dell()

@@ -1831,9 +1831,7 @@ def getUvData():
                 list.append(loops)
     return list
 
-
 def getUvOverlay():
-
     selected_objects = bpy.context.view_layer.objects.selected
     list = []
     for obj in selected_objects:
