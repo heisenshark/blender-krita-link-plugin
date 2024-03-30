@@ -209,6 +209,12 @@ class BlenderKritaLink(DockWidget):
                 os.path.dirname(os.path.realpath(__file__)), "BlenderKritaLinkUI.ui"
             )
         )
+
+        def image_search_change(text:str):
+            print("search change",text)
+            ImageList.instance.update_images_list(ImageList.image_list,text)
+
+        self.central_widget.image_search.textChanged.connect(image_search_change)
         self.last_send_pixels_time = 0
         MessageListener("SELECT_UVS", self.handle_uv_response)
         MessageListener("GET_UV_OVERLAY", self.handle_uv_overlay)
