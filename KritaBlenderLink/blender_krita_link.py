@@ -14,7 +14,7 @@ from .ui.ImageList import ImageList
 from .settings import Settings
 from .ImageState import ImageState
 from krita import Krita, DockWidget, Notifier
-from PyQt5.QtWidgets import QColorDialog, QLineEdit, QSpinBox
+from PyQt5.QtWidgets import QColorDialog, QDoubleSpinBox, QLineEdit, QSpinBox
 from PyQt5.QtCore import QObject, QEvent, QTimer
 from PyQt5.QtGui import QColor
 import time
@@ -135,7 +135,7 @@ class BlenderKritaLink(DockWidget):
 
         def open_color_dialog():
             color = QColorDialog.getColor(
-                initial=QColor(Settings.getSetting("uvColor")),
+                initial=QColor(Settings.getSetting("uvColor") if Settings.getSetting("uvColor") is not None else "#000000"),
                 options=QColorDialog.ColorDialogOption.ShowAlphaChannel,
             )
             UvOverlay.COLOR = color
@@ -145,7 +145,7 @@ class BlenderKritaLink(DockWidget):
             Settings.setSetting("uvColor", color.name(QColor.NameFormat.HexArgb))
 
         self.filter = ClickFilter(open_color_dialog)
-        c = QColor(Settings.getSetting("uvColor"))
+        c = QColor(Settings.getSetting("uvColor") if Settings.getSetting("uvColor") is not None else "#000000")
         self.central_widget.UVColorButton.setStyleSheet(
             f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
         )
@@ -165,7 +165,7 @@ class BlenderKritaLink(DockWidget):
             Settings.setSetting("port",ConnectionManager.port)
             print(f"port changed to: + {ConnectionManager.port}")
 
-        self.central_widget.connection_port.setText(f"{ConnectionManager.port if Settings.getSetting('port') is None else Settings.getSetting('port')}")
+        self.central_widget.connection_port.setValue(ConnectionManager.port if Settings.getSetting('port') is None else Settings.getSetting('port'))
         self.central_widget.connection_port.textChanged.connect(on_port_change)
         
         def on_width_change(number):
@@ -179,6 +179,7 @@ class BlenderKritaLink(DockWidget):
         self.uv_overlay_debouncer = Debouncer(
             self.get_uv_overlay, 0.2, self.attach_uv_viewer
         )
+        # creating debounce for clicking send data too many times in a second
         self.send_pixels_debouncer = Debouncer(self.send_pixels, 0.2)
 
         # self.centralWidget.UVColorButton.clicked.connect(openColorDialog)
@@ -213,7 +214,7 @@ class BlenderKritaLink(DockWidget):
         def image_search_change(text:str):
             print("search change",text)
             ImageList.instance.update_images_list(ImageList.image_list,text)
-
+        
         self.central_widget.image_search.textChanged.connect(image_search_change)
         self.last_send_pixels_time = 0
         MessageListener("SELECT_UVS", self.handle_uv_response)
@@ -248,7 +249,7 @@ class BlenderKritaLink(DockWidget):
             self.on_blender_connected,
             lambda: (
                 self.central_widget.ConnectionStatus.setText(
-                    "Connection status: blender disconnected",
+                    "Status: blender disconnected",
                 ),
                 UvOverlay.set_polygons([]),
                 ImageList.instance.clear_signal.emit(),
@@ -262,7 +263,7 @@ class BlenderKritaLink(DockWidget):
 
     def on_blender_connected(self):
         self.central_widget.ConnectionStatus.setText(
-            "Connection status: blender connected"
+            "Status: blender connected"
         )
         Thread(target=self.get_image_data).start()
 
@@ -273,6 +274,7 @@ class BlenderKritaLink(DockWidget):
         if self.connection.linked_document not in Krita.instance().documents():
             self.connection.remove_link()
         images = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
+        self.central_widget.image_search.setText("")
         ImageList.instance.refresh_signal.emit(images["data"])
 
     def refresh_document(self, doc):
@@ -300,9 +302,11 @@ class BlenderKritaLink(DockWidget):
         elif self.advancedRefresh == 2:
             doc.refreshProjection()
 
-        pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
 
         def write_mem():
+            if self.central_widget.send_delay.value() > 0.0:
+                time.sleep(self.central_widget.send_delay.value())
+            pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
             self.connection.write_memory(pixelBytes)
             depth = Krita.instance().activeDocument().colorDepth()
             self.connection.send_message(

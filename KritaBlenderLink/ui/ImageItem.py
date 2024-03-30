@@ -12,7 +12,6 @@ from KritaBlenderLink.connection import ConnectionManager, blender_image_as_new_
 class ImageItem(QWidget):
     def __init__(self, image,conn_manager: ConnectionManager, parent=None):
         super().__init__(parent)
-        # self.setVisible(False)
         self.image = image
         self.conn_manager = conn_manager
         height = 0
