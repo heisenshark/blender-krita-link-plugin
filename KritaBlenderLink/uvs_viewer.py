@@ -168,8 +168,8 @@ class UvOverlay(QWidget):
 
             document = view.document()
             zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
-
-            painter.setPen(QPen(UvOverlay.COLOR, 0.5 * Settings.getSetting("uv_width") / zoom, Qt.SolidLine))
+            pen_weight = Settings.getSetting("uv_width") if Settings.getSetting("uv_width") is not None else 1
+            painter.setPen(QPen(UvOverlay.COLOR, 0.5 * pen_weight / zoom, Qt.SolidLine))
             for p in self._polygons:
                 painter.drawPolygon(p)
 

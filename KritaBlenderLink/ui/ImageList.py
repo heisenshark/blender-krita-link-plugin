@@ -50,6 +50,8 @@ class ImageList(QListWidget):
         for image in images_list:
             if str_filter is not None and image['name'].upper().find(str_filter.upper()) < 0:
                 continue
+            if image["size"][0] == 0 or image["size"][1] == 0:
+                continue
             listItem = QListWidgetItem(self)
             item = ImageItem(
                 image=image,
