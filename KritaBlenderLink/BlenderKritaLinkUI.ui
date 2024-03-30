@@ -119,9 +119,35 @@ border: 3px solid #8f8f91;
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="connection_port"/>
+      <widget class="QLineEdit" name="connection_port">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>0</height>
+        </size>
+       </property>
+      </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QLineEdit" name="image_search">
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="placeholderText">
+      <string>Search the blender images list</string>
+     </property>
+     <property name="clearButtonEnabled">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QFrame" name="ImagesFrame">
@@ -200,6 +226,11 @@ border: 3px solid #8f8f91;
     </widget>
    </item>
   </layout>
+  <action name="actionseach">
+   <property name="text">
+    <string>seach</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

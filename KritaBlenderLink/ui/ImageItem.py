@@ -12,6 +12,7 @@ from KritaBlenderLink.connection import ConnectionManager, blender_image_as_new_
 class ImageItem(QWidget):
     def __init__(self, image,conn_manager: ConnectionManager, parent=None):
         super().__init__(parent)
+        # self.setVisible(False)
         self.image = image
         self.conn_manager = conn_manager
         height = 0
@@ -112,3 +113,23 @@ class ImageItem(QWidget):
             open_as_new_document(self.image,self.conn_manager,True)
             print("dupa") 
             pass
+    def mouseDoubleClickEvent(self, a0 )-> None: 
+        if (
+            hasattr(Krita, "instance")
+            and Krita.instance()
+            and Krita.instance().activeDocument()
+        ):
+            document = Krita.instance().activeDocument()
+            height = document.height()
+            width = document.width()
+        else:
+            return super().mouseDoubleClickEvent(a0)
+
+        if self.image["isActive"]:
+            self.conn_manager.remove_link()
+        elif not (self.image_size[0] == width and self.image_size[1] == height):
+            open_as_new_document(self.image,self.conn_manager,True)
+        else:
+            override_image(self.image,self.conn_manager) 
+        return super().mouseDoubleClickEvent(a0)
+
