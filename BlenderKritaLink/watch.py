@@ -2,7 +2,7 @@ from time import time
 import bpy
 import numpy as np
 from BlenderKritaLink.connection import KritaConnection
-from BlenderKritaLink.uv_extractor import get_fast_hash, getUvOverlay, getUvOverlayFast
+from BlenderKritaLink.uv_extractor import get_fast_hash, getUvOverlay
 
 from .image_manager import ImageManager
 
