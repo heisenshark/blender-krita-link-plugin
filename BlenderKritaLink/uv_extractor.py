@@ -1833,7 +1833,8 @@ def getUvData():
     return list
 
 def getUvOverlay():
-    selected_objects = bpy.context.view_layer.objects.selected
+    selected_objects = set(bpy.context.view_layer.objects.selected)
+    selected_objects.add(bpy.context.view_layer.objects.active)
     list = []
     for obj in selected_objects:
         data = getUvFromObject(obj)
@@ -1855,20 +1856,16 @@ def getUvFromObject(selected_object):
 
     print(mode)
     bm = None
-    if mode == "EDIT":
-        print(mode)
-        bm = bmesh.from_edit_mesh(selected_object.data)
-    else:
-        print(mode)
-        bm = bmesh.new()
-        bm.from_mesh(selected_object.data)
+    data_copy = selected_object.data.copy()
+    bm = bmesh.new()
+    bm.from_mesh(data_copy)
 
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
     # pprint(bm.faces)
     data = get_island_info_from_bmesh(bm, True)
-
+    print("getuvs: ", data)
     list = []
     uv_layer = bm.loops.layers.uv.active
 
@@ -1886,8 +1883,8 @@ def getUvFromObject(selected_object):
 
 def get_fast_hash(): 
     raw_str = ""
-    # cx = bpy.context.copy()
-    selected_objects = bpy.context.view_layer.objects.selected
+    selected_objects = set(bpy.context.view_layer.objects.selected)
+    selected_objects.add(bpy.context.view_layer.objects.active)
     t = time()
     for o in selected_objects:
         raw_str+= o.name 
@@ -1901,42 +1898,37 @@ def get_fast_hash():
             continue
         print(mode)
         bm = None
-        oo = o.data.copy()
+        data_copy = o.data.copy()
 
         # print(mode)
         bm = bmesh.new()
         try:
-            bm.from_mesh(oo)
+            bm.from_mesh(data_copy)
 
-            print(f"getUV {time() - t}")
             bm.verts.ensure_lookup_table()
             bm.edges.ensure_lookup_table()
             bm.faces.ensure_lookup_table()
-            # pprint(bm.faces)
-            print(f"getUV {time() - t}")
-            # data = get_island_info_from_bmesh(bm, True)
+
             if not bm.loops.layers.uv:
                 continue
             uv_layer = bm.loops.layers.uv.verify()
 
-            # create database
-            selected_faces = [f for f in bm.faces if f.select]
-
-            # return get_island_info_from_faces(bm, selected_faces, uv_layer)
-            # list = []
-            # uv_layer = bm.loops.layers.uv.active
-            # if data is None : continue
-            for f in  islice(selected_faces,0,10000,100):
+            selected_faces = [f for f in bm.faces if f.select] 
+            raw_str += str(len(selected_faces))
+            uv_sum=0.1235435
+            for f in  islice(selected_faces,0,400,1):
                 for u in f.loops:
-                    raw_str += str([u[uv_layer].uv[0], 1 - u[uv_layer].uv[1]])
-                        # loop = [u[uv_layer].uv[0], 1 - u[uv_layer].uv[1]]
-                        # loops.append(loop)
-                    # list.append(loops)
+                    uv_sum += u[uv_layer].uv[0] + 1 - u[uv_layer].uv[1]
+
+            for f in  islice(selected_faces,400,100000,20):
+                for u in f.loops:
+                    uv_sum += u[uv_layer].uv[0] + 1 - u[uv_layer].uv[1]
+            raw_str += str(uv_sum)
         except Exception as e:
             print(e)
         finally:
             bm.free()
-            bpy.data.meshes.remove(oo)
+            bpy.data.meshes.remove(data_copy)
 
     print(f"gethash {time() - t}")
     return hash(raw_str)
