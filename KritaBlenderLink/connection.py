@@ -288,6 +288,9 @@ def blender_image_as_new_layer(image_object, conn_manager):
 def open_as_new_document(image, conn_manager: ConnectionManager, link:bool = False):
     x,y = image["size"]
     newDocument = Krita.instance().createDocument(x, y, image["name"], "RGBA", "U8", "", 300.0)
+    bckg = newDocument.nodeByName("Background")
+    if bckg is not None:
+        bckg.remove()
     Krita.instance().activeWindow().addView(newDocument)
     blender_image_as_new_layer(image,conn_manager)
     if link: 

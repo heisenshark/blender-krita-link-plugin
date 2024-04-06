@@ -302,8 +302,8 @@ class BlenderKritaLink(DockWidget):
         elif self.advancedRefresh == 2:
             doc.refreshProjection()
 
-
         def write_mem():
+            t = time.time()
             if self.central_widget.send_delay.value() > 0.0:
                 time.sleep(self.central_widget.send_delay.value())
             pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())

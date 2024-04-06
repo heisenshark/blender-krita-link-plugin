@@ -159,7 +159,6 @@ class KritaConnection:
         conn = KritaConnection.CONNECTION
         if not isinstance(msg, object) or "type" not in msg or "requestId" not in msg: 
             return
-        print("message is object UwU")
         type = msg["type"]
         match type:
             case "REFRESH":
@@ -191,8 +190,11 @@ class KritaConnection:
                             )
 
                     print("refresh initiated")
+
+                    ImageManager.UPDATING_IMAGE.acquire()
                     ImageManager.INSTANCE.mirror_image(pixels_array)
                     pixels_array = None
+                    ImageManager.UPDATING_IMAGE.release()
                     print("refresh complete")
                     self.update_message("connected")
                     conn.send(

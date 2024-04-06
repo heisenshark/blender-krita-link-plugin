@@ -1865,7 +1865,6 @@ def getUvFromObject(selected_object):
     bm.faces.ensure_lookup_table()
     # pprint(bm.faces)
     data = get_island_info_from_bmesh(bm, True)
-    print("getuvs: ", data)
     list = []
     uv_layer = bm.loops.layers.uv.active
 
@@ -1884,7 +1883,8 @@ def getUvFromObject(selected_object):
 def get_fast_hash(): 
     raw_str = ""
     selected_objects = set(bpy.context.view_layer.objects.selected)
-    selected_objects.add(bpy.context.view_layer.objects.active)
+    if bpy.context.view_layer.objects.active is not None:
+        selected_objects.add(bpy.context.view_layer.objects.active)
     t = time()
     for o in selected_objects:
         raw_str+= o.name 
@@ -1899,8 +1899,6 @@ def get_fast_hash():
         print(mode)
         bm = None
         data_copy = o.data.copy()
-
-        # print(mode)
         bm = bmesh.new()
         try:
             bm.from_mesh(data_copy)
@@ -1916,6 +1914,7 @@ def get_fast_hash():
             selected_faces = [f for f in bm.faces if f.select] 
             raw_str += str(len(selected_faces))
             uv_sum=0.1235435
+
             for f in  islice(selected_faces,0,400,1):
                 for u in f.loops:
                     uv_sum += u[uv_layer].uv[0] + 1 - u[uv_layer].uv[1]
@@ -1924,6 +1923,7 @@ def get_fast_hash():
                 for u in f.loops:
                     uv_sum += u[uv_layer].uv[0] + 1 - u[uv_layer].uv[1]
             raw_str += str(uv_sum)
+
         except Exception as e:
             print(e)
         finally:
