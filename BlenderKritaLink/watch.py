@@ -1,7 +1,8 @@
+from time import time
 import bpy
 import numpy as np
 from BlenderKritaLink.connection import KritaConnection
-from BlenderKritaLink.uv_extractor import getUvOverlay
+from BlenderKritaLink.uv_extractor import get_fast_hash, getUvOverlay, getUvOverlayFast
 
 from .image_manager import ImageManager
 
@@ -16,16 +17,19 @@ class UvWatch:
         interval = bpy.context.scene.global_store.sync_interval
         if not toggle:
             return interval
-        data = getUvOverlay()
-        new_hash = hash(frozenset(np.array(data).flatten()))
+        t = time()
+        print(f"hello, perfcheck{time()-t}", )
+        new_hash = get_fast_hash()
+        print(f"hello, perfcheck{time()-t}")
         print("hashing func", new_hash, self.last_hash)
         if new_hash != self.last_hash and KritaConnection.CONNECTION != None:
+            dd = getUvOverlay() 
             print("uv data changed, sending overlay")
             self.last_hash = new_hash
             KritaConnection.CONNECTION.send(
                         {
                             "type": "GET_UV_OVERLAY",
-                            "data": data,
+                            "data": dd,
                             "noshow": True,
                             "requestId": -1,
                         }
@@ -55,11 +59,11 @@ class ImagesStateWatch():
                     ),
                     image.size[0], 
                     image.size[1],
-                    ImageManager.INSTANCE.IMAGE_NAME== image.name,
+                    ImageManager.INSTANCE.IMAGE_NAME == image.name,
                 })
             )
-        new_hash = hash(frozenset(data));
 
+        new_hash = hash(frozenset(data))
         if new_hash != self.last_hash and KritaConnection.CONNECTION != None:
             data = []
             for image in bpy.data.images:
@@ -70,8 +74,7 @@ class ImagesStateWatch():
                             image.filepath
                         ),
                         "size": [image.size[0], image.size[1]],
-                        "isActive": ImageManager.INSTANCE.IMAGE_NAME
-                        == image.name,
+                        "isActive": ImageManager.INSTANCE.IMAGE_NAME == image.name,
                     }
                 )
             self.last_hash = new_hash
