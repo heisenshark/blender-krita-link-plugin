@@ -1,6 +1,5 @@
 from time import time
 import bpy
-import numpy as np
 from BlenderKritaLink.connection import KritaConnection
 from BlenderKritaLink.uv_extractor import get_fast_hash, getUvOverlay
 
@@ -18,6 +17,7 @@ class UvWatch:
         if not toggle:
             return interval
         t = time()
+        ImageManager.UPDATING_IMAGE.acquire()
         print(f"hello, perfcheck{time()-t}", )
         new_hash = get_fast_hash()
         print(f"hello, perfcheck{time()-t}")
@@ -34,6 +34,7 @@ class UvWatch:
                             "requestId": -1,
                         }
                     )
+        ImageManager.UPDATING_IMAGE.release()
         print(interval)
         return interval
 

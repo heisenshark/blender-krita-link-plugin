@@ -1,3 +1,4 @@
+from multiprocessing import Lock
 import bpy
 import numpy as np
 import time
@@ -5,6 +6,7 @@ import time
 
 class ImageManager:
     INSTANCE = None
+    UPDATING_IMAGE = Lock()
 
     def __init__(self) -> None:
         if not ImageManager.INSTANCE:
@@ -57,16 +59,16 @@ class ImageManager:
         if isinstance(mirrored_pixels[0], np.uint8):
             mirrored_pixels = np.divide(mirrored_pixels, np.array(np.float32(255)))
         print(mirrored_pixels[0], mirrored_pixels[1])
-
+        
         image.pixels.foreach_set(mirrored_pixels.astype(np.float32))
-
+        #
+        # print("hello from mirror_image", time.time() - t)
+        # print(f"Image mirrored{image.name}")
+        image.update()
+        image.update_tag()
         print("hello from mirror_image", time.time() - t)
-        print(f"Image mirrored{image.name}")
-        for obj in bpy.context.scene.objects:
-            obj.update_tag()
-        print("hello from mirror_image", time.time() - t)
 
-        if image.is_float:  # I dont know what it is anymore
+        if image.is_float:  # I dont know what it is anymore and even how to test this 
             image.pack()
             image.alpha_mode = "PREMUL"
             image.alpha_mode = "STRAIGHT"
@@ -79,9 +81,8 @@ class ImageManager:
         fp32_array = np.frombuffer(bytes_array, dtype=np.float32)
         fp32_array.resize(len(image.pixels))
         image.pixels.foreach_set(fp32_array)
-        image.pack()
-        for obj in bpy.context.scene.objects:
-            obj.update_tag()
+        image.update()
+        image.update_tag()
 
     def get_image(self):
         if not self.IMAGE_NAME:
