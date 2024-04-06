@@ -1,3 +1,5 @@
+import threading
+from time import sleep
 from PyQt5.QtWidgets import (
     QWidget,
     QSizePolicy,
@@ -111,7 +113,7 @@ class ImageItem(QWidget):
         elif action == openAsNewDocumentLinkAct:
             open_as_new_document(self.image,self.conn_manager,True)
             print("dupa") 
-            pass
+
     def mouseDoubleClickEvent(self, a0 )-> None: 
         if (
             hasattr(Krita, "instance")
@@ -127,8 +129,9 @@ class ImageItem(QWidget):
         if self.image["isActive"]:
             self.conn_manager.remove_link()
         elif not (self.image_size[0] == width and self.image_size[1] == height):
+            sleep(0.1)
             open_as_new_document(self.image,self.conn_manager,True)
         else:
             override_image(self.image,self.conn_manager) 
-        return super().mouseDoubleClickEvent(a0)
+        # return super().mouseDoubleClickEvent(a0)
 

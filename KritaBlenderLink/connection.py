@@ -60,7 +60,9 @@ class ConnectionManager:
     images = []
 
     def __init__(self) -> None:
-        ConnectionManager.port = Settings.getSetting("port")
+        # ConnectionManager.port = Settings.getSetting("port") if Settings.getSetting("port") is not None else Se
+        if Settings.getSetting("port") is not None:
+            ConnectionManager.port = Settings.getSetting("port") 
         MessageListener("GET_IMAGES", lambda message: self.set_images(message["data"]))
 
     def set_images(self, images):
