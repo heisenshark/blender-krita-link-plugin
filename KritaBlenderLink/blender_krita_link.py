@@ -316,7 +316,7 @@ class BlenderKritaLink(DockWidget):
             if self.refresh_time < time.time() -3:
                 self.refresh_time = time.time()
                 self.connection.send_message(
-                    {"type": "REFRESH", "depth": depth, "requestId": 2137}
+                    {"type": "REFRESH", "depth": depth, "requestId": 2137, "data":{"size":[doc.width(),doc.height()]}}
                 )
 
         Thread(target=write_mem).start()
