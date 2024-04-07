@@ -31,17 +31,19 @@ class ImageManager:
             width,
             height,
         )
-
-        image_pixels = image_pixels.reshape(width * height, 4)
-
+        print("bef reshaped", image_pixels, len(image_pixels),len(image_pixels)/width/4,len(image_pixels)/height/4)
+        image_pixels = image_pixels.reshape(-1, 4)
+        print("reshaped")
         if isinstance(image_pixels[0][0], np.uint16) or isinstance(
             image_pixels[0][0], np.uint8
         ):
             image_pixels[:, [2, 0]] = image_pixels[:, [0, 2]]
+        print("flipped")
 
         image_pixels.resize(len(image.pixels))
+        print("resized")
         pixels_reshaped = image_pixels.reshape((height, width, 4))
-
+        print("reshaped2")
         mirrored_pixels = np.flipud(pixels_reshaped).flatten()
         print(
             "hello from mirror_image",

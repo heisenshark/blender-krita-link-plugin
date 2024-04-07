@@ -162,39 +162,43 @@ class KritaConnection:
         type = msg["type"]
         match type:
             case "REFRESH":
+                size = msg["data"]["size"]
+                pixelsize = int(msg["depth"][1:])//8
+                
                 with shared_memory_context(
                     name="krita-blender"+str(KritaConnection.PORT),
-                    size=None,
+                    size=size[0]*size[1]*pixelsize*4,
                     destroy=False,
                     create=False,
                 ) as existing_shm:
-                    print("refresh initiated")
+                    print("refresh initiated", len(existing_shm.buf))
                     self.update_message("got The Image")
                     pixels_array = None
                     match msg["depth"]:
                         case "F32":
                             pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.float32
+                                existing_shm.buf, dtype=np.float32, count=size[0]*size[1]*4
                             )
                         case "F16":
                             pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.float16
+                                existing_shm.buf, dtype=np.float16, count=size[0]*size[1]*4
                             )
                         case "U8":
                             pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.uint8
+                                existing_shm.buf, dtype=np.uint8, count=size[0]*size[1]*4
                             )
                         case "U16":
                             pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.uint16
+                                existing_shm.buf, dtype=np.uint16, count=size[0]*size[1]*4
                             )
-
+                    
                     print("refresh initiated")
                     try:
                         ImageManager.UPDATING_IMAGE.acquire()
                         ImageManager.INSTANCE.mirror_image(pixels_array)
                         pixels_array = None
                     finally:
+                        pixels_array = None
                         ImageManager.UPDATING_IMAGE.release()
                     print("refresh complete")
                     self.update_message("connected")
