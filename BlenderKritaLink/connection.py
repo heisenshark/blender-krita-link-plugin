@@ -190,11 +190,12 @@ class KritaConnection:
                             )
 
                     print("refresh initiated")
-
-                    ImageManager.UPDATING_IMAGE.acquire()
-                    ImageManager.INSTANCE.mirror_image(pixels_array)
-                    pixels_array = None
-                    ImageManager.UPDATING_IMAGE.release()
+                    try:
+                        ImageManager.UPDATING_IMAGE.acquire()
+                        ImageManager.INSTANCE.mirror_image(pixels_array)
+                        pixels_array = None
+                    finally:
+                        ImageManager.UPDATING_IMAGE.release()
                     print("refresh complete")
                     self.update_message("connected")
                     conn.send(

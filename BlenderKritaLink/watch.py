@@ -17,24 +17,26 @@ class UvWatch:
         if not toggle:
             return interval
         t = time()
-        ImageManager.UPDATING_IMAGE.acquire()
-        print(f"hello, perfcheck{time()-t}", )
-        new_hash = get_fast_hash()
-        print(f"hello, perfcheck{time()-t}")
-        print("hashing func", new_hash, self.last_hash)
-        if new_hash != self.last_hash and KritaConnection.CONNECTION != None:
-            dd = getUvOverlay() 
-            print("uv data changed, sending overlay")
-            self.last_hash = new_hash
-            KritaConnection.CONNECTION.send(
-                        {
-                            "type": "GET_UV_OVERLAY",
-                            "data": dd,
-                            "noshow": True,
-                            "requestId": -1,
-                        }
-                    )
-        ImageManager.UPDATING_IMAGE.release()
+        try:
+            ImageManager.UPDATING_IMAGE.acquire()
+            print(f"hello, perfcheck{time()-t}", )
+            new_hash = get_fast_hash()
+            print(f"hello, perfcheck{time()-t}")
+            print("hashing func", new_hash, self.last_hash)
+            if new_hash != self.last_hash and KritaConnection.CONNECTION != None:
+                dd = getUvOverlay() 
+                print("uv data changed, sending overlay")
+                self.last_hash = new_hash
+                KritaConnection.CONNECTION.send(
+                            {
+                                "type": "GET_UV_OVERLAY",
+                                "data": dd,
+                                "noshow": True,
+                                "requestId": -1,
+                            }
+                        )
+        finally:
+            ImageManager.UPDATING_IMAGE.release()
         print(interval)
         return interval
 
