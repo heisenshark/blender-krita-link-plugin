@@ -37,8 +37,8 @@ class UvWatch:
                         )
         finally:
             ImageManager.UPDATING_IMAGE.release()
-        print(interval)
-        return interval
+            print(interval)
+            return interval
 
 class ImagesStateWatch():
     instance = None

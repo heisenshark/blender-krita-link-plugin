@@ -91,6 +91,7 @@ class BlenderKritaLink(DockWidget):
         print(Settings.getSetting("listenCanvas"))
         self.connection = ConnectionManager()
         self.avc_connected = False
+        self.refresh_time = 0 
         ImageState.instance.onImageDataChange.connect(
             lambda x: [change_memory(self.connection), print("image file changed")]
         )
@@ -219,11 +220,15 @@ class BlenderKritaLink(DockWidget):
         self.last_send_pixels_time = 0
         MessageListener("SELECT_UVS", self.handle_uv_response)
         MessageListener("GET_UV_OVERLAY", self.handle_uv_overlay)
+        MessageListener("REFRESH", self.refresh_handle)
 
         attach_watch = QTimer(self)
         attach_watch.setInterval(300)
         attach_watch.timeout.connect(self.attach_uv_viewer)
         attach_watch.start()
+
+    def refresh_handle(self,message):
+        self.refresh_time = 0
 
     def attach_shortcuts_listeners(self):
         print("onviewcreated, attaching shortcuts listeners...")
@@ -308,9 +313,11 @@ class BlenderKritaLink(DockWidget):
             pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
             self.connection.write_memory(pixelBytes)
             depth = Krita.instance().activeDocument().colorDepth()
-            self.connection.send_message(
-                {"type": "REFRESH", "depth": depth, "requestId": 2137}
-            )
+            if self.refresh_time < time.time() -3:
+                self.refresh_time = time.time()
+                self.connection.send_message(
+                    {"type": "REFRESH", "depth": depth, "requestId": 2137}
+                )
 
         Thread(target=write_mem).start()
 

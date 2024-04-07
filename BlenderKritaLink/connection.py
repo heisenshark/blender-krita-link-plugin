@@ -203,6 +203,7 @@ class KritaConnection:
                             "type": "REFRESH",
                             "depth": msg["depth"],
                             "requestId": msg["requestId"],
+                            "data": 1,
                         }
                     )
 
