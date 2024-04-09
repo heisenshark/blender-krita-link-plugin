@@ -27,14 +27,14 @@ def port_update(self, context):
     print("updating port")
     new_port = int(context.scene.global_store.connection_port)
     if new_port == KritaConnection.PORT:
-        return new_port
+        return 
     if KritaConnection.CONNECTION is not None:
         KritaConnection.PORT = new_port
         KritaConnection.CONNECTION.close()
     elif KritaConnection.LINK_INSTANCE.listener is not None:
         KritaConnection.LINK_INSTANCE.timeout_listener()
         KritaConnection.PORT = new_port
-    return new_port
+    return 
 
 def update_panel_loop():
     try:
