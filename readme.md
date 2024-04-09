@@ -2,6 +2,8 @@
 
 This plugin offers a seamless way to edit Blender images in Krita without the need for file reloads.
 
+[Krita Artists post](https://krita-artists.org/t/blender-krita-link-plugin-for-texture-editing-in-krita/83980)
+
 ## Features
 - Links Blender textures with Krita files.
 - Imports Blender textures as new layers.
@@ -31,13 +33,16 @@ The plugin consists of two parts: one for Blender and one for Krita.
 - In Blender: Enable the plugin through `Edit > Preferences > Add-ons > Blender Krita Link`.
 
 ### Krita Plugin Operation
-- Use the `connect` button to link to Blender, or `disconnect` to end your session.
-- The plugin loads images from Blender into a list. Link an image by right-clicking it and selecting `link image`, or import a texture by clicking `from blender to new layer`.
+- Use the `connect` button to link to Blender, or `disconnect` to end your session. alco there is `connection port` field.
+- The plugin loads images from Blender into a list. Link an image by right-clicking it and selecting `link image`, or import a texture by clicking `from blender to new layer`. Also you can use double click to make action based on context.
 - To enable linking, ensure the Krita document is the same size as the Blender image. Set the correct color spectrum under `Image > Properties > Image Color Space` (RGB/Alpha and Profile: sRGB are recommended).
 - If "Send on draw" is activated, the image will update in Blender when you release the draw button on the canvas (and use ctrl+(Shift)+Z). You can also send data manually using the "Send Data" button.
-- Use `Refresh Images` to update image data from Blender.
-- Use `Get UV Overlay` to get the UV map from selected object(in blender) to krita.
-  - you can also change color of uv maps and their visibility
+- Use `Refresh Images` to update image list from blender
+- Use `Get maps` to get the UV map from selected object(in blender) to krita.
+  - you can also change color and the stroke weight of uv maps and their visibility
+- you can also enable the auto update of uvs and images list in blender using `sync uvs and images` checkbox, with the sync interval variable.
+- You can also search the images from inside the `Search blender images list` textbox.
+- `Select islands` is also an option for converting selected uvs to krita selection
 
 ## UVselectAddition Installation
 - The UV selection command requires compiling UVselectAddition.
@@ -45,7 +50,7 @@ The plugin consists of two parts: one for Blender and one for Krita.
 - Place `uv-select` from `cppPart` in the `krita>plugins` directory.
 - Create an AppImage as per tutorials.
 - Extract libraries and action files to your Krita installation as described in this [repository](https://github.com/Acly/krita-ai-tools).
-- 
+
 UVSelectionAddition is not required for the Python plugin to work but offers additional features.
 
 ### Disclaimer
