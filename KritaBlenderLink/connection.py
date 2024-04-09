@@ -294,7 +294,9 @@ def open_as_new_document(image, conn_manager: ConnectionManager, link:bool = Fal
     Krita.instance().activeWindow().addView(newDocument)
     blender_image_as_new_layer(image,conn_manager)
     if link: 
+        asyncio.run(conn_manager.request({"type": "GET_UV_OVERLAY"}))
         override_image(image,conn_manager)  
+        
 
 def change_memory(conn_manager: ConnectionManager):
     """function to resize memory if image data is changed"""
