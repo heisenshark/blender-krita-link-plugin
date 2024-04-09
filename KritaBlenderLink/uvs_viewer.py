@@ -120,11 +120,15 @@ class UvOverlay(QWidget):
         self._polygons = []
 
     def update_stuff(self):
-        active_window = Application.activeWindow()
+        active_window = Krita.instance().activeWindow()
+        if sip.isdeleted(active_window):
+            return
         active_view = active_window.activeView()
-        if active_view != self.view:
+        if sip.isdeleted(self.view)  or sip.isdeleted(active_view) or active_view != self.view:
             return
         document = self.view.document()
+        if sip.isdeleted(document):
+            return
         width = float(document.width())
         height = float(document.height())
         # print("doc", width, height)
