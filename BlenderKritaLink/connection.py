@@ -3,7 +3,7 @@ from threading import Thread, Event
 from multiprocessing import shared_memory
 import bpy
 import numpy as np
-
+import traceback
 from .image_manager import ImageManager
 from .uv_extractor import getUvData, getUvOverlay
 from pprint import pprint
@@ -340,6 +340,7 @@ class KritaConnection:
                         self.handle_message(msg)
 
             except Exception as e:
+                print(traceback.format_exc())
                 pprint(e)
                 if KritaConnection.CONNECTION is not None:
                     KritaConnection.CONNECTION.close()

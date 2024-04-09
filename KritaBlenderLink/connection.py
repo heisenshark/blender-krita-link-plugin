@@ -5,6 +5,7 @@ from multiprocessing import shared_memory
 from multiprocessing.connection import Client
 import asyncio
 from contextlib import contextmanager
+import traceback
 
 
 @contextmanager
@@ -102,6 +103,7 @@ class ConnectionManager:
                             print("recived message", format_message(message))
                         self.emit_message(message)
                     except Exception as e:
+                        print(traceback.format_exc())
                         print("Error on reciving messages", e)
                         self.connection = None
                         if self.shm and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)):
