@@ -79,8 +79,15 @@
           </property>
          </widget>
         </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
         <item>
-         <widget class="QLabel" name="label">
+         <widget class="QLabel" name="label_4">
           <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Connection port&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -159,14 +166,20 @@
        <number>3</number>
       </property>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_6">
+       <layout class="QFormLayout" name="formLayout">
+        <property name="fieldGrowthPolicy">
+         <enum>QFormLayout::FieldsStayAtSizeHint</enum>
+        </property>
+        <property name="rowWrapPolicy">
+         <enum>QFormLayout::WrapLongRows</enum>
+        </property>
         <property name="rightMargin">
          <number>0</number>
         </property>
         <property name="bottomMargin">
          <number>0</number>
         </property>
-        <item>
+        <item row="0" column="0">
          <widget class="QPushButton" name="SendDataButton">
           <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Send &lt;span style=&quot; font-weight:600;&quot;&gt;currently linked&lt;/span&gt; image to blender&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -176,7 +189,7 @@
           </property>
          </widget>
         </item>
-        <item>
+        <item row="0" column="1">
          <widget class="QCheckBox" name="SendOnDrawCheckbox">
           <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Send image data to currently linked image as you draw on the canvas&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -186,7 +199,17 @@
           </property>
          </widget>
         </item>
-        <item>
+        <item row="1" column="0">
+         <widget class="QDoubleSpinBox" name="send_delay">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;delay value&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="singleStep">
+           <double>0.010000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
          <widget class="QLabel" name="label_3">
           <property name="toolTip">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;This setting is mostly for painting by single click, if you mainly are doing strokes leave it at 0.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -196,16 +219,6 @@
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QDoubleSpinBox" name="send_delay">
-          <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;delay value&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-          </property>
-          <property name="singleStep">
-           <double>0.010000000000000</double>
           </property>
          </widget>
         </item>
@@ -317,9 +330,12 @@
        <number>0</number>
       </property>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
           <item>
            <widget class="QPushButton" name="SelectUVIslandsButton">
             <property name="toolTip">
@@ -350,6 +366,10 @@
             </property>
            </widget>
           </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
            <widget class="QLabel" name="UVsColor">
             <property name="toolTip">
@@ -411,9 +431,6 @@ border: 3px solid #8f8f91;
    </item>
    <item>
     <widget class="QPushButton" name="ImageTosRGBButton">
-     <property name="toolTip">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;open settings of current image, pretty useful if your colors are not matching the blender image(try messing with color spaces)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-     </property>
      <property name="text">
       <string>Image Settings</string>
      </property>

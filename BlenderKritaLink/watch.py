@@ -14,7 +14,8 @@ class UvWatch:
     def check_for_changes(self):
         toggle = bpy.context.scene.global_store.sync_toggle
         interval = bpy.context.scene.global_store.sync_interval
-        if not toggle:
+        if not toggle or KritaConnection.CONNECTION is None:
+            self.last_hash = None
             return interval
         t = time()
         try:
