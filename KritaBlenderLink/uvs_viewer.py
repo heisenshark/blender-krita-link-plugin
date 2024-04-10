@@ -103,8 +103,8 @@ class UvOverlay(QWidget):
         self.view = view
         self.openGL = parent.findChild(QOpenGLWidget)
         super().__init__(parent)
-
-        UvOverlay.COLOR = QColor(Settings.getSetting("uvColor") or "#000000FF")
+        n = Settings.getSetting("uvColor")
+        UvOverlay.COLOR = QColor(n if n is not None else "#000000FF")
         UvOverlay.INSTANCES_SET.append(self)
         self.setObjectName("UVOVERLAY")
 
