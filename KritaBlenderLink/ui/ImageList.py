@@ -46,7 +46,7 @@ class ImageList(QListWidget):
         def compute_index(text):
             return text.upper().find(str_filter.upper()) if str_filter is not None else 1 
 
-        images_list.sort(key= lambda x:compute_index(x['name']))
+        images_list.sort(key= lambda x:compute_index(x['name']) - 1000 if x["isActive"] else 0)
         for image in images_list:
             if str_filter is not None and image['name'].upper().find(str_filter.upper()) < 0:
                 continue
