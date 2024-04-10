@@ -72,10 +72,10 @@ class ImageItem(QWidget):
 
         cmenu.addSection(self.image["name"])
         
-        openAct = cmenu.addAction("From Blender To new Layer")
-        linkImageAct = cmenu.addAction("Link Image")
-        unlinkImageAct = cmenu.addAction("Unlink Image")
-        openAsNewDocumentLinkAct = cmenu.addAction("Open in new Document and link")
+        openAct = cmenu.addAction("From Blender to new Layer")
+        linkImageAct = cmenu.addAction("Link image")
+        unlinkImageAct = cmenu.addAction("Unlink image")
+        openAsNewDocumentLinkAct = cmenu.addAction("Open in new document and link")
         openAsNewDocumentAct = cmenu.addAction("Open in new document")
         
         if unlinkImageAct is None or linkImageAct is None:

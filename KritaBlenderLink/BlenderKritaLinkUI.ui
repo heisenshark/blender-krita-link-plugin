@@ -180,7 +180,7 @@
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Connection port&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>connection port</string>
+               <string>Connection port</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -315,7 +315,7 @@
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Case insensitive search for the phrase inside the images, searches only on name and is whitespace sensitive&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
-               <string>Search blender images list</string>
+               <string>Search Blender images list</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>

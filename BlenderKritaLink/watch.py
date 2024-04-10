@@ -27,7 +27,6 @@ class UvWatch:
             if new_hash != self.last_hash and KritaConnection.CONNECTION != None:
                 dd = getUvOverlay() 
                 print("uv data changed, sending overlay")
-                self.last_hash = new_hash
                 KritaConnection.CONNECTION.send(
                             {
                                 "type": "GET_UV_OVERLAY",
@@ -36,7 +35,9 @@ class UvWatch:
                                 "requestId": -1,
                             }
                         )
+            self.last_hash = new_hash
         finally:
+            
             ImageManager.UPDATING_IMAGE.release()
             print(interval)
             return interval
