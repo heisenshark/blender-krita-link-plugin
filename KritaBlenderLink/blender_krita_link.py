@@ -248,6 +248,24 @@ class BlenderKritaLink(DockWidget):
         attach_watch.timeout.connect(self.attach_uv_viewer)
         attach_watch.start()
 
+        def watch_disable():
+            # print("watch disable")
+            # if self.connection.connection is None:
+            #     QPushButton().setE
+            self.central_widget.DisconnectButton.setEnabled(self.connection.connection is not None)
+            self.central_widget.ConnectButton.setEnabled(self.connection.connection is None)
+            self.central_widget.blender_images.setEnabled(self.connection.connection is not None)
+            self.central_widget.uvs.setEnabled(self.connection.connection is not None)
+
+            doc = Krita.instance().activeDocument()
+            linked_doc = self.connection.linked_document
+            self.central_widget.SendDataButton.setEnabled(not (doc != linked_doc or not linked_doc))
+
+        disable_timer = QTimer(self)
+        disable_timer.setInterval(100)
+        disable_timer.timeout.connect(watch_disable)
+        disable_timer.start()
+
     def refresh_handle(self,message):
         self.refresh_time = 0
 

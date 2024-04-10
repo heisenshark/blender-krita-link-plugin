@@ -20,16 +20,16 @@ class ImageList(QListWidget):
         super().__init__(parent)
         self.setObjectName("ImageList")
         self.setObjectName("scrollArea")
-        self.setMinimumSize(QSize(0, 100))
+        self.setMinimumSize(QSize(0, 40))
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(
             self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth()
         )
-
+        self.setSizePolicy(sizePolicy)
         self.refresh_signal.connect(self.update_images_list)
         self.clear_signal.connect(self.clear_images_list)
 
