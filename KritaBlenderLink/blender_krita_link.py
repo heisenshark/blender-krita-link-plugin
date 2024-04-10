@@ -15,7 +15,7 @@ from .settings import Settings
 from .ImageState import ImageState
 from krita import Krita, DockWidget, Notifier
 from PyQt5.QtWidgets import QColorDialog, QDoubleSpinBox, QLineEdit, QSpinBox
-from PyQt5.QtCore import QObject, QEvent, QTimer
+from PyQt5.QtCore import QObject, QEvent, QPoint, QTimer
 from PyQt5.QtGui import QColor
 import time
 
@@ -54,18 +54,23 @@ class Debouncer:
             t.start()
 
 
-class ClickFilter(QObject):
-    def __init__(self, function):
+class ColorButtonFilter(QObject):
+    def __init__(self, function,wheel_handler=None):
         super().__init__()
         self.function = function
+        self.wheel_handler = wheel_handler 
+
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
             if self.function:
                 self.function()
             return True
+        if event.type() == QEvent.Wheel:
+            print(event.angleDelta())
+            if self.wheel_handler:
+                self.wheel_handler(event.angleDelta())
         return super().eventFilter(obj, event)
-
 
 class BlenderKritaLinkExtension(Extension):
     def __init__(self, parent):
@@ -144,8 +149,23 @@ class BlenderKritaLink(DockWidget):
                 f"background-color: {color.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
             )
             Settings.setSetting("uvColor", color.name(QColor.NameFormat.HexArgb))
+        def wheel_handler(delta):
+            color = Settings.getSetting("uvColor")
+            color = list(QColor(color).getHsv())
+            color[2] += delta.y()//12
+            if color[2] <0:color[2] = 0 
+            if color[2] >255:color[2] = 255
+            
+            c = QColor()
+            c.setHsv(color[0],color[1],color[2],color[3])
+            print(color)
+            UvOverlay.COLOR = c
+            color = Settings.setSetting("uvColor",c.name(QColor.NameFormat.HexArgb))
+            self.central_widget.UVColorButton.setStyleSheet(
+                f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
+            )
 
-        self.filter = ClickFilter(open_color_dialog)
+        self.filter = ColorButtonFilter(open_color_dialog,wheel_handler=wheel_handler)
         c = QColor(Settings.getSetting("uvColor") if Settings.getSetting("uvColor") is not None else "#000000")
         self.central_widget.UVColorButton.setStyleSheet(
             f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
@@ -185,6 +205,7 @@ class BlenderKritaLink(DockWidget):
 
         # self.centralWidget.UVColorButton.clicked.connect(openColorDialog)
         self.central_widget.UVColorButton.installEventFilter(self.filter)
+
         self.central_widget.ConnectButton.clicked.connect(self.connect_blender)
         self.central_widget.DisconnectButton.clicked.connect(self.connection.disconnect)
         self.central_widget.SendDataButton.clicked.connect(
