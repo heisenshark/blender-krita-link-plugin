@@ -120,8 +120,9 @@ class ConnectionManager:
                 name="krita-blender"+str(ConnectionManager.port), create=True, size=canvas_bytes_len
             )
             print("memory  created")
-        except Exception:
+        except Exception as e:
             print("file exists, trying another way")
+            print(e,"\n",traceback.print_exc())
             self.shm = shared_memory.SharedMemory(
                 name="krita-blender"+str(ConnectionManager.port), create=False, size=canvas_bytes_len
             )

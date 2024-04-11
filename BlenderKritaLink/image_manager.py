@@ -63,9 +63,6 @@ class ImageManager:
         print(mirrored_pixels[0], mirrored_pixels[1])
         
         image.pixels.foreach_set(mirrored_pixels.astype(np.float32))
-        #
-        # print("hello from mirror_image", time.time() - t)
-        # print(f"Image mirrored{image.name}")
         image.update()
         image.update_tag()
         print("hello from mirror_image", time.time() - t)
