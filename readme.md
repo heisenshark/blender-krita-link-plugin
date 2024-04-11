@@ -13,7 +13,7 @@ This plugin offers a seamless way to edit Blender images in Krita without the ne
 
 ![panel](panel.png)
 
-https://github.com/heisenshark/heisenshark/raw/main/demo.mp4
+https://github.com/heisenshark/blender-krita-link-plugin/assets/46131664/45f3323f-0e44-4db7-af15-114b76320710
 
 ## Installation
 
