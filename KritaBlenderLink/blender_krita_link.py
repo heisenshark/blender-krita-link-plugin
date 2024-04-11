@@ -1,76 +1,27 @@
 from krita import Extension
+from krita import Krita, DockWidget, Notifier
 from threading import Timer, Thread
 import os as os
 import asyncio
 from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
+from PyQt5 import uic, sip
+from PyQt5.QtWidgets import QColorDialog
+from PyQt5.QtCore import QTimer
+from PyQt5.QtGui import QColor
+import time
+
 from .connection import (
     ConnectionManager,
     MessageListener,
     change_memory,
     format_message,
 )
-from PyQt5 import uic, sip
 from .ui.ImageList import ImageList
 from .settings import Settings
 from .ImageState import ImageState
-from krita import Krita, DockWidget, Notifier
-from PyQt5.QtWidgets import QColorDialog, QDoubleSpinBox, QLineEdit, QSpinBox
-from PyQt5.QtCore import QObject, QEvent, QPoint, QTimer
-from PyQt5.QtGui import QColor
-import time
+from .lb import ColorButtonFilter, Debouncer
 
 DOCKER_TITLE = "Blender Krita Link"
-
-
-class Debouncer:
-    def __init__(self, fn, time, non_debounced=lambda: None) -> None:
-        self.fn = fn
-        self.time = time
-        self.last_time = 0
-        self.finished = True
-        self.non_debounced = non_debounced
-
-    def cal(self):
-        time_now = time.time()
-        print("cal called", time_now, time.time())
-        self.non_debounced()
-        if time_now - self.last_time > self.time:
-
-            def execute():
-                if self.finished:
-                    try:
-                        self.finished = False
-                        self.last_time = time_now
-                        self.fn()
-                    finally:
-                        self.finished = True
-                        print("finished", time_now, time.time())
-                    
-            if self.finished:
-                execute()
-                return
-
-            t = Timer(self.time, execute)
-            t.start()
-
-
-class ColorButtonFilter(QObject):
-    def __init__(self, function,wheel_handler=None):
-        super().__init__()
-        self.function = function
-        self.wheel_handler = wheel_handler 
-
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.MouseButtonPress:
-            if self.function:
-                self.function()
-            return True
-        if event.type() == QEvent.Wheel:
-            print(event.angleDelta())
-            if self.wheel_handler:
-                self.wheel_handler(event.angleDelta())
-        return super().eventFilter(obj, event)
 
 class BlenderKritaLinkExtension(Extension):
     def __init__(self, parent):
@@ -192,7 +143,6 @@ class BlenderKritaLink(DockWidget):
         def on_width_change(number):
             Settings.setSetting("uv_width",number)
         
-        # QSpinBox().setValue(Settings.setSetting("uv_width"))
         self.central_widget.uv_width.setValue(1 if Settings.getSetting("uv_width") is None else Settings.getSetting("uv_width"))
         self.central_widget.uv_width.valueChanged.connect(on_width_change)
 
@@ -212,7 +162,7 @@ class BlenderKritaLink(DockWidget):
             self.send_pixels_debouncer.cal
         )
         self.central_widget.RefreshImagesButton.clicked.connect(self.get_image_data)
-        self.central_widget.ImageTosRGBButton.clicked.connect(self.image_to_srgb)
+        self.central_widget.ImageTosRGBButton.clicked.connect(self.open_image_settings)
         self.central_widget.SelectUVIslandsButton.clicked.connect(
             self.select_uvs_debouncer.cal
         )
@@ -249,9 +199,6 @@ class BlenderKritaLink(DockWidget):
         attach_watch.start()
 
         def watch_disable():
-            # print("watch disable")
-            # if self.connection.connection is None:
-            #     QPushButton().setE
             self.central_widget.DisconnectButton.setEnabled(self.connection.connection is not None)
             self.central_widget.ConnectButton.setEnabled(self.connection.connection is None)
             self.central_widget.blender_images.setEnabled(self.connection.connection is not None)
@@ -325,9 +272,6 @@ class BlenderKritaLink(DockWidget):
         root_node = doc.rootNode()
         if root_node and len(root_node.childNodes()) > 0:
             root_node.setBlendingMode(root_node.blendingMode())
-            # test_layer = doc.createNode("DELME", "paintLayer")
-            # root_node.addChildNode(test_layer, root_node.childNodes()[0])
-            # test_layer.remove()
 
     def send_pixels(self):
         doc = Krita.instance().activeDocument()
@@ -376,7 +320,6 @@ class BlenderKritaLink(DockWidget):
 
     def canvasChanged(self, canvas):
         print("something Happened")
-
     def active_view_changed(self):
         print("active view changed")
         self.get_image_data()
@@ -391,22 +334,16 @@ class BlenderKritaLink(DockWidget):
         if qv is None:
             return
         overlay = qv.findChild(UvOverlay, "UVOVERLAY")
-        # print("attach call!!!!")
          
         if overlay is not None:
-            # for ov in UvOverlay.INSTANCES_SET:
-            #     if not sip.isdeleted(ov):
-            #         ov.update_stuff()
             return
 
-        # print("active window: ", qv)
-        # print(qv.findChild(UvOverlay))
         if active_view.document() is None:
             raise RuntimeError("Document of active view is None!")
         my_overlay = UvOverlay(active_view)
         my_overlay.show()
 
-    def image_to_srgb(self):
+    def open_image_settings(self):
         Krita.instance().action("image_properties").trigger()
 
     def select_uvs(self):
@@ -417,15 +354,12 @@ class BlenderKritaLink(DockWidget):
         asyncio.run(self.connection.request({"type": "GET_UV_OVERLAY"}))
 
     def handle_uv_response(self, message):
-        # print("handle uvs triggered", message)
         action = Krita.instance().action("select_shapes")
         width_height = [
             Krita.instance().activeDocument().width(),
             Krita.instance().activeDocument().height(),
         ]
         faces = message["data"]
-        # UvOverlay.set_polygons(faces)
-
         if action is not None:
             print("action exists")
             for g in faces:

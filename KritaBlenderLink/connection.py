@@ -1,38 +1,11 @@
 from KritaBlenderLink.settings import Settings
 from krita import Krita
 from threading import Thread
-from multiprocessing import shared_memory
 from multiprocessing.connection import Client
+from multiprocessing import shared_memory
 import asyncio
-from contextlib import contextmanager
 import traceback
-
-
-@contextmanager
-def shared_memory_context(name: str, size: int, destroy: bool, create=bool):
-    shm = None
-    if size is None:
-        shm = shared_memory.SharedMemory(name=name, create=create)
-    else:
-        shm = shared_memory.SharedMemory(name=name, create=create, size=size)
-
-    try:
-        yield shm
-    finally:
-        if destroy:
-            shm.unlink()
-        else:
-            shm.close()
-
-
-def check_shared_memory_exists(name):
-    try:
-        shm = shared_memory.SharedMemory(name=name)
-        shm.close()
-        return True
-    except FileNotFoundError:
-        return False
-
+from .lb import shared_memory_context, check_shared_memory_exists
 
 class MessageListener:
     def __init__(self, event_type, fn, once=False) -> None:
@@ -61,7 +34,6 @@ class ConnectionManager:
     images = []
 
     def __init__(self) -> None:
-        # ConnectionManager.port = Settings.getSetting("port") if Settings.getSetting("port") is not None else Se
         if Settings.getSetting("port") is not None:
             ConnectionManager.port = Settings.getSetting("port") 
         MessageListener("GET_IMAGES", lambda message: self.set_images(message["data"]))
