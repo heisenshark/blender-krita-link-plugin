@@ -1,3 +1,5 @@
+import threading
+from time import sleep
 from PyQt5.QtWidgets import (
     QWidget,
     QSizePolicy,
@@ -7,15 +9,13 @@ from PyQt5.QtWidgets import (
     QMenu,
 )
 from krita import Krita
-
+from KritaBlenderLink.connection import ConnectionManager, blender_image_as_new_layer, open_as_new_document, override_image
 
 class ImageItem(QWidget):
-    def __init__(self, image, on_open, on_override,on_unlink, parent=None):
+    def __init__(self, image,conn_manager: ConnectionManager, parent=None):
         super().__init__(parent)
         self.image = image
-        self.on_open = on_open
-        self.on_override = on_override
-        self.on_unlink = on_unlink
+        self.conn_manager = conn_manager
         height = 0
         width = 0
         dir(Krita)
@@ -41,8 +41,10 @@ class ImageItem(QWidget):
         self.label_9.setObjectName("label_9")
 
         if "isActive" in image and image["isActive"]:
-            self.label_9.setStyleSheet("font-weight: bold; color: green;")
-
+            if conn_manager.linked_document == Krita.instance().activeDocument(): 
+                self.label_9.setStyleSheet("font-weight: bold; color: green;")
+            else:
+                self.label_9.setStyleSheet("font-weight: bold; color: #003300;")
         self.image_size = image["size"]
         if not (self.image_size[0] == width and self.image_size[1] == height):
             self.label_9.setStyleSheet("color: red;")
@@ -70,10 +72,14 @@ class ImageItem(QWidget):
 
         cmenu.addSection(self.image["name"])
         
-        openAct = cmenu.addAction("From Blender To new Layer")
-        linkImageAct = cmenu.addAction("Link Image")
-        unlinkImageAct = cmenu.addAction("Unlink Image")
-
+        openAct = cmenu.addAction("From Blender to new Layer")
+        linkImageAct = cmenu.addAction("Link image")
+        unlinkImageAct = cmenu.addAction("Unlink image")
+        openAsNewDocumentLinkAct = cmenu.addAction("Open in new document and link")
+        openAsNewDocumentAct = cmenu.addAction("Open in new document")
+        
+        if unlinkImageAct is None or linkImageAct is None:
+            return
         unlinkImageAct.setDisabled(not self.image["isActive"])
         linkImageAct.setDisabled(self.image["isActive"])
 
@@ -92,13 +98,40 @@ class ImageItem(QWidget):
         
         action = cmenu.exec_(self.mapToGlobal(event.pos()))
         print(action)
-        
         if action == linkImageAct:
             print("link selected")
-            self.on_override(self.image)
+            override_image(self.image,self.conn_manager) 
         elif action == unlinkImageAct:
             print("unlinking image")
-            self.on_unlink()
+            self.conn_manager.remove_link()
         elif action == openAct:
             print("from blender to krita selected")
-            self.on_open(self.image)
+            blender_image_as_new_layer(self.image,self.conn_manager)
+        elif action == openAsNewDocumentAct:
+            open_as_new_document(self.image,self.conn_manager)
+            print("dupa") 
+        elif action == openAsNewDocumentLinkAct:
+            open_as_new_document(self.image,self.conn_manager,True)
+            print("dupa") 
+
+    def mouseDoubleClickEvent(self, a0 )-> None: 
+        if (
+            hasattr(Krita, "instance")
+            and Krita.instance()
+            and Krita.instance().activeDocument()
+        ):
+            document = Krita.instance().activeDocument()
+            height = document.height()
+            width = document.width()
+        else:
+            return super().mouseDoubleClickEvent(a0)
+
+        if self.image["isActive"]:
+            self.conn_manager.remove_link()
+        elif not (self.image_size[0] == width and self.image_size[1] == height):
+            sleep(0.1)
+            open_as_new_document(self.image,self.conn_manager,True)
+        else:
+            override_image(self.image,self.conn_manager) 
+        # return super().mouseDoubleClickEvent(a0)
+
