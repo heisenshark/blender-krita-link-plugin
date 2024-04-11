@@ -124,16 +124,16 @@ class BlenderKritaLink(DockWidget):
         )
 
         def on_port_change(text):
+            new_port = int(text)
             try:
-                new_port = int(text)
                 print(f"{ConnectionManager.connection} {new_port} {ConnectionManager.port}")
                 if new_port != ConnectionManager.port:
                     self.connection.disconnect()
                     print("disconnecting")
-                ConnectionManager.port = new_port 
             except Exception as e:
                 print(e,"\n",traceback.print_exc())
-                ConnectionManager.port = 65431
+            finally:
+                ConnectionManager.port = new_port
             if ConnectionManager.port > 65531:
                 ConnectionManager.port = 65431
             Settings.setSetting("port",ConnectionManager.port)
