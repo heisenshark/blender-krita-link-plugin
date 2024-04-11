@@ -1,13 +1,6 @@
 from BlenderKritaLink.connection import KritaConnection
 import bpy 
 
-def prop_update(self,context):
-    print("siema")
-    if hasattr(bpy.context,"screen") and hasattr(bpy.context.screen,"areas") and bpy.context.screen.areas:
-        for area in bpy.context.screen.areas:
-            area.tag_redraw()
-    print("elo")
-
 class _PT_BlenderKritaLinkPanel(bpy.types.Panel):
     """Blender Krita Link Panel"""
     bl_label = "Krita Link"
@@ -15,8 +8,6 @@ class _PT_BlenderKritaLinkPanel(bpy.types.Panel):
     bl_region_type = "UI"
     bl_category = "Blender Krita Link"
     INSTANCE = None
-    # my_string:bpy.props.StringProperty(name="test_prop",default="listening",update=prop_update)
-    # connection_port:bpy.props.IntProperty(name="connection_port",default=12341,update=prop_update)
     
     def __init__(self) -> None:
         super().__init__()
@@ -31,4 +22,3 @@ class _PT_BlenderKritaLinkPanel(bpy.types.Panel):
         layout.operator("object.disconnect_operator")
         layout.prop(bpy.context.scene.global_store, "sync_toggle")
         layout.prop(bpy.context.scene.global_store, "sync_interval")
-        # print("redrawing panel...")

@@ -15,7 +15,7 @@ from itertools import islice
 import bpy
 from mathutils import Vector
 import bmesh
-
+import traceback
 __DEBUG_MODE = False
 
 
@@ -1925,6 +1925,7 @@ def get_fast_hash():
             raw_str += str(uv_sum)
 
         except Exception as e:
+            print(e,"\n",traceback.print_exc())
             print(e)
         finally:
             bm.free()

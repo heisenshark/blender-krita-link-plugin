@@ -39,8 +39,8 @@ class KritaConnection:
         if not KritaConnection.LINK_INSTANCE:
             KritaConnection.LINK_INSTANCE = self
 
-    def dell(self):
-        print("delling")
+    def cleanup(self):
+        print("cleanup")
         if KritaConnection.CONNECTION is not None:
             print("sending close")
             self.__STOP_SIGNAL.set()
@@ -59,7 +59,6 @@ class KritaConnection:
             with Client(
                 ("localhost", KritaConnection.PORT), authkey=b"2137"
             ) as connection:
-                # self.__STOP_SIGNAL.set()
                 connection.send("close")
 
     def start(self):

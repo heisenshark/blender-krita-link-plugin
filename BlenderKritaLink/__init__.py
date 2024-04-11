@@ -15,7 +15,7 @@ bl_info = {
 }
 
 
-def ui_update(self, context):
+def label_update(self, context):
     if context is None or context.area is None or context.area.regions is None:
         return
     for region in context.area.regions:
@@ -36,10 +36,11 @@ def port_update(self, context):
         KritaConnection.PORT = new_port
     return 
 
-def update_panel_loop():
+def update_panel_watch():
     try:
         bpy.context.scene.global_store.label = KritaConnection.STATUS
     except Exception as e:
+        print(e,"\n",traceback.print_exc())
         print(e)
     return 0.5
 
@@ -49,7 +50,7 @@ class GlobalStore(bpy.types.PropertyGroup):
         name="ConnectionStatus",
         description="Connection status",
         default="listening",
-        update=ui_update,
+        update=label_update,
     )
     connection_port: bpy.props.IntProperty(
         name="connection port",
@@ -95,7 +96,7 @@ def register():
     bpy.types.Scene.global_store = bpy.props.PointerProperty(type=GlobalStore)
     ImageManager()
     bpy.utils.register_class(DisconnectOperator)
-    bpy.app.timers.register(update_panel_loop, persistent=True)
+    bpy.app.timers.register(update_panel_watch, persistent=True)
     bpy.app.timers.register(init_connection,first_interval=0.2,persistent=True)
 
     UvWatch()
@@ -104,10 +105,10 @@ def register():
     bpy.app.timers.register(ImagesStateWatch.instance.check_for_changes, first_interval=0.5, persistent=True)
 
 def unregister():
-    KritaConnection.LINK_INSTANCE.dell()
+    KritaConnection.LINK_INSTANCE.cleanup()
     bpy.utils.unregister_class(GlobalStore)
     bpy.utils.unregister_class(_PT_BlenderKritaLinkPanel)
-    bpy.app.timers.unregister(update_panel_loop)
+    bpy.app.timers.unregister(update_panel_watch)
     bpy.utils.unregister_class(DisconnectOperator)
     bpy.app.timers.unregister(UvWatch.instance.check_for_changes)
     bpy.app.timers.unregister(ImagesStateWatch.instance.check_for_changes)

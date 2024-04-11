@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QColorDialog
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QColor
 import time
+import  traceback
 
 from .connection import (
     ConnectionManager,
@@ -130,9 +131,10 @@ class BlenderKritaLink(DockWidget):
                     self.connection.disconnect()
                     print("disconnecting")
                 ConnectionManager.port = new_port 
-            except Exception:
+            except Exception as e:
+                print(e,"\n",traceback.print_exc())
                 ConnectionManager.port = 65431
-            if ConnectionManager.port > 65533:
+            if ConnectionManager.port > 65531:
                 ConnectionManager.port = 65431
             Settings.setSetting("port",ConnectionManager.port)
             print(f"port changed to: + {ConnectionManager.port}")
