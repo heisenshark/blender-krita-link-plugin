@@ -1,6 +1,7 @@
 # code heavily inspired from https://krita-artists.org/t/canvas-render-how-to/31540
 from __future__ import annotations
 
+from .settings import Settings
 from krita import Krita
 from PyQt5 import sip
 from PyQt5.QtCore import (
@@ -29,7 +30,7 @@ def ruler_correction():
     for c in pobj.children():
         if c.metaObject().className() == "KisView":
             view = c
-            print(c)
+            # print(c)
     x = 0
     y = 0
     for c in view.children():
@@ -40,7 +41,7 @@ def ruler_correction():
                 x = w
             if w >= h:
                 y = h
-    print(x, y)
+    # print(x, y)
     return [x, y]
 
 
@@ -102,8 +103,8 @@ class UvOverlay(QWidget):
         self.view = view
         self.openGL = parent.findChild(QOpenGLWidget)
         super().__init__(parent)
-
-        UvOverlay.COLOR = QColor(Settings.getSetting("uvColor") or "#000000FF")
+        n = Settings.getSetting("uvColor")
+        UvOverlay.COLOR = QColor(n if n is not None else "#000000FF")
         UvOverlay.INSTANCES_SET.append(self)
         self.setObjectName("UVOVERLAY")
 
@@ -119,14 +120,18 @@ class UvOverlay(QWidget):
         self._polygons = []
 
     def update_stuff(self):
-        active_window = Application.activeWindow()
+        active_window = Krita.instance().activeWindow()
+        if sip.isdeleted(active_window):
+            return
         active_view = active_window.activeView()
-        if active_view != self.view:
+        if sip.isdeleted(self.view)  or sip.isdeleted(active_view) or active_view != self.view:
             return
         document = self.view.document()
+        if sip.isdeleted(document):
+            return
         width = float(document.width())
         height = float(document.height())
-        print("doc", width, height)
+        # print("doc", width, height)
         self._polygons = []
 
         for p in UvOverlay.POLYGONS:
@@ -167,8 +172,8 @@ class UvOverlay(QWidget):
 
             document = view.document()
             zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
-
-            painter.setPen(QPen(UvOverlay.COLOR, 0.5 / zoom, Qt.SolidLine))
+            pen_weight = Settings.getSetting("uv_width") if Settings.getSetting("uv_width") is not None else 1
+            painter.setPen(QPen(UvOverlay.COLOR, 0.5 * pen_weight / zoom, Qt.SolidLine))
             for p in self._polygons:
                 painter.drawPolygon(p)
 
@@ -181,15 +186,15 @@ class UvOverlay(QWidget):
         return super().eventFilter(obj, e)
 
     def resize_handle(self):
-        print("resize !!!! ")
+        # print("resize !!!! ")
         q_canvas = self.parent().findChild(QAbstractScrollArea).viewport()
         x, y = ruler_correction()
-        print(
-            q_canvas.x(),
-            q_canvas.y(),
-            q_canvas.geometry().width(),
-            q_canvas.geometry().height(),
-        )
+        # print(
+        #     q_canvas.x(),
+        #     q_canvas.y(),
+        #     q_canvas.geometry().width(),
+        #     q_canvas.geometry().height(),
+        # )
         self.setGeometry(
             x, y, q_canvas.geometry().width(), q_canvas.geometry().height()
         )
@@ -203,7 +208,7 @@ class UvOverlay(QWidget):
                 pp.append([v[0], v[1]])
             UvOverlay.POLYGONS.append(pp)
 
-        print(UvOverlay.INSTANCES_SET)
+        # print(UvOverlay.INSTANCES_SET)
         for ov in UvOverlay.INSTANCES_SET:
             if not sip.isdeleted(ov):
                 ov.update_stuff()

@@ -10,11 +10,12 @@ from collections import defaultdict
 from pprint import pprint
 from math import fabs, sqrt
 import os
-
+from time import time
+from itertools import islice
 import bpy
 from mathutils import Vector
 import bmesh
-
+import traceback
 __DEBUG_MODE = False
 
 
@@ -1831,10 +1832,9 @@ def getUvData():
                 list.append(loops)
     return list
 
-
 def getUvOverlay():
-
-    selected_objects = bpy.context.view_layer.objects.selected
+    selected_objects = set(bpy.context.view_layer.objects.selected)
+    selected_objects.add(bpy.context.view_layer.objects.active)
     list = []
     for obj in selected_objects:
         data = getUvFromObject(obj)
@@ -1856,20 +1856,15 @@ def getUvFromObject(selected_object):
 
     print(mode)
     bm = None
-    if mode == "EDIT":
-        print(mode)
-        bm = bmesh.from_edit_mesh(selected_object.data)
-    else:
-        print(mode)
-        bm = bmesh.new()
-        bm.from_mesh(selected_object.data)
+    data_copy = selected_object.data.copy()
+    bm = bmesh.new()
+    bm.from_mesh(data_copy)
 
     bm.verts.ensure_lookup_table()
     bm.edges.ensure_lookup_table()
     bm.faces.ensure_lookup_table()
     # pprint(bm.faces)
     data = get_island_info_from_bmesh(bm, True)
-
     list = []
     uv_layer = bm.loops.layers.uv.active
 
@@ -1882,3 +1877,59 @@ def getUvFromObject(selected_object):
                 loops.append(loop)
             list.append(loops)
     return list
+
+#code here is taken or heavily inspired from pribambase made by lampysprites
+
+def get_fast_hash(): 
+    raw_str = ""
+    selected_objects = set(bpy.context.view_layer.objects.selected)
+    if bpy.context.view_layer.objects.active is not None:
+        selected_objects.add(bpy.context.view_layer.objects.active)
+    t = time()
+    for o in selected_objects:
+        raw_str+= o.name 
+        mode = o.mode
+        if not (
+            hasattr(o.data, "uv_layers")
+            and hasattr(o.data.uv_layers, "active")
+            and o.data.uv_layers.active
+        ):
+            print("does not have UV data.")
+            continue
+        print(mode)
+        bm = None
+        data_copy = o.data.copy()
+        bm = bmesh.new()
+        try:
+            bm.from_mesh(data_copy)
+
+            bm.verts.ensure_lookup_table()
+            bm.edges.ensure_lookup_table()
+            bm.faces.ensure_lookup_table()
+
+            if not bm.loops.layers.uv:
+                continue
+            uv_layer = bm.loops.layers.uv.verify()
+
+            selected_faces = [f for f in bm.faces if f.select] 
+            raw_str += str(len(selected_faces))
+            uv_sum=0.1235435
+
+            for f in  islice(selected_faces,0,400,1):
+                for u in f.loops:
+                    uv_sum += u[uv_layer].uv[0] + 1 - u[uv_layer].uv[1]
+
+            for f in  islice(selected_faces,400,100000,20):
+                for u in f.loops:
+                    uv_sum += u[uv_layer].uv[0] + 1 - u[uv_layer].uv[1]
+            raw_str += str(uv_sum)
+
+        except Exception as e:
+            print(e,"\n",traceback.print_exc())
+            print(e)
+        finally:
+            bm.free()
+            bpy.data.meshes.remove(data_copy)
+
+    print(f"gethash {time() - t}")
+    return hash(raw_str)

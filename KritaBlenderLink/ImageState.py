@@ -49,7 +49,7 @@ class ImageState(QObject):
         self.instance.onSRGBColorSpace.emit(d["colorProfile"] == "sRGB")
 
     def compare_data(self, data1, data2):
-        print(data1, data2)
+        # print(data1, data2)
         self.check_color_profile()
         for key, value in data1.items():
             if key == "size":
@@ -92,7 +92,7 @@ class ImageState(QObject):
 
     def eventFilter(self, obj, event):
         if isinstance(obj, QOpenGLWidget):
-            if event.type() == 93 or (event.type() == 3 and event.button() == 1):
+            if event.type() == 93 or (event.type() == 3 and event.button() == 1) or event.type()== 196:
                 print(obj, type(obj).__bases__)
                 self.data["paint"] = True
                 self.onPixelsChange.emit(self.data)

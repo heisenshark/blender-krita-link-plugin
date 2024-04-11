@@ -3,6 +3,7 @@ from threading import Thread, Event
 from multiprocessing import shared_memory
 import bpy
 import numpy as np
+import traceback
 from .image_manager import ImageManager
 from .uv_extractor import getUvData, getUvOverlay
 from pprint import pprint
@@ -30,14 +31,16 @@ class KritaConnection:
     PORT = 65431
     PASS = b"2137"
     LINK_INSTANCE = None
-    STATUS: str
+    STATUS: str = "listening"
+    CONNECTION = None
+    listener = None
 
     def __init__(self) -> None:
         if not KritaConnection.LINK_INSTANCE:
             KritaConnection.LINK_INSTANCE = self
 
-    def dell(self):
-        print("delling")
+    def cleanup(self):
+        print("cleanup")
         if KritaConnection.CONNECTION is not None:
             print("sending close")
             self.__STOP_SIGNAL.set()
@@ -48,6 +51,14 @@ class KritaConnection:
                 ("localhost", KritaConnection.PORT), authkey=b"2137"
             ) as connection:
                 self.__STOP_SIGNAL.set()
+                connection.send("close")
+
+    def timeout_listener(self):
+        if self.listener is not None:
+            print("accepting")
+            with Client(
+                ("localhost", KritaConnection.PORT), authkey=b"2137"
+            ) as connection:
                 connection.send("close")
 
     def start(self):
@@ -73,7 +84,7 @@ class KritaConnection:
         d = ImageManager.INSTANCE.get_image_from_name(
             msg["data"]["image"]["name"]
         )
-        print("siema z powodzeniem pobrano rzeczy")
+        print("hello, successfully got things")
         if d is None:
             return
 
@@ -103,7 +114,7 @@ class KritaConnection:
             d.size[1] * bdepth * d.size[0],
         )
         with shared_memory_context(
-            name="blender-krita",
+            name="blender-krita"+str(KritaConnection.PORT),
             size=lenght * bdepth,
             destroy=False,
             create=False,
@@ -147,40 +158,47 @@ class KritaConnection:
         conn = KritaConnection.CONNECTION
         if not isinstance(msg, object) or "type" not in msg or "requestId" not in msg: 
             return
-        print("message is object UwU")
         type = msg["type"]
         match type:
             case "REFRESH":
+                size = msg["data"]["size"]
+                pixelsize = int(msg["depth"][1:])//8
+                
                 with shared_memory_context(
-                    name="krita-blender",
-                    size=None,
+                    name="krita-blender"+str(KritaConnection.PORT),
+                    size=size[0]*size[1]*pixelsize*4,
                     destroy=False,
                     create=False,
                 ) as existing_shm:
-                    print("refresh initiated")
+                    print("refresh initiated", len(existing_shm.buf))
                     self.update_message("got The Image")
                     pixels_array = None
                     match msg["depth"]:
                         case "F32":
                             pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.float32
+                                existing_shm.buf, dtype=np.float32, count=size[0]*size[1]*4
                             )
                         case "F16":
                             pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.float16
+                                existing_shm.buf, dtype=np.float16, count=size[0]*size[1]*4
                             )
                         case "U8":
                             pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.uint8
+                                existing_shm.buf, dtype=np.uint8, count=size[0]*size[1]*4
                             )
                         case "U16":
                             pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.uint16
+                                existing_shm.buf, dtype=np.uint16, count=size[0]*size[1]*4
                             )
-
+                    
                     print("refresh initiated")
-                    ImageManager.INSTANCE.mirror_image(pixels_array)
-                    pixels_array = None
+                    try:
+                        ImageManager.UPDATING_IMAGE.acquire()
+                        ImageManager.INSTANCE.mirror_image(pixels_array)
+                        pixels_array = None
+                    finally:
+                        pixels_array = None
+                        ImageManager.UPDATING_IMAGE.release()
                     print("refresh complete")
                     self.update_message("connected")
                     conn.send(
@@ -188,6 +206,7 @@ class KritaConnection:
                             "type": "REFRESH",
                             "depth": msg["depth"],
                             "requestId": msg["requestId"],
+                            "data": 1,
                         }
                     )
 
@@ -300,7 +319,6 @@ class KritaConnection:
             KritaConnection.CONNECTION = conn
             print("connection accepted")
             ImageManager.INSTANCE.set_image_name(None)
-
             try:
                 self.update_message("connected")
                 while not self.__STOP_SIGNAL.isSet():
@@ -321,6 +339,7 @@ class KritaConnection:
                         self.handle_message(msg)
 
             except Exception as e:
+                print(traceback.format_exc())
                 pprint(e)
                 if KritaConnection.CONNECTION is not None:
                     KritaConnection.CONNECTION.close()

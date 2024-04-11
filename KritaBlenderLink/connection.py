@@ -1,36 +1,11 @@
+from KritaBlenderLink.settings import Settings
 from krita import Krita
 from threading import Thread
-from multiprocessing import shared_memory
 from multiprocessing.connection import Client
+from multiprocessing import shared_memory
 import asyncio
-from contextlib import contextmanager
-
-
-@contextmanager
-def shared_memory_context(name: str, size: int, destroy: bool, create=bool):
-    shm = None
-    if size is None:
-        shm = shared_memory.SharedMemory(name=name, create=create)
-    else:
-        shm = shared_memory.SharedMemory(name=name, create=create, size=size)
-
-    try:
-        yield shm
-    finally:
-        if destroy:
-            shm.unlink()
-        else:
-            shm.close()
-
-
-def check_shared_memory_exists(name):
-    try:
-        shm = shared_memory.SharedMemory(name=name)
-        shm.close()
-        return True
-    except FileNotFoundError:
-        return False
-
+import traceback
+from .lb import shared_memory_context, check_shared_memory_exists
 
 class MessageListener:
     def __init__(self, event_type, fn, once=False) -> None:
@@ -59,6 +34,8 @@ class ConnectionManager:
     images = []
 
     def __init__(self) -> None:
+        if Settings.getSetting("port") is not None:
+            ConnectionManager.port = Settings.getSetting("port") 
         MessageListener("GET_IMAGES", lambda message: self.set_images(message["data"]))
 
     def set_images(self, images):
@@ -77,7 +54,7 @@ class ConnectionManager:
             return
         else:
             print(self.connection)
-
+        print(f"connecting to {self.port}")
         def thread():
             with Client(("localhost", self.port), authkey=b"2137") as connection:
                 print("client created")
@@ -88,7 +65,7 @@ class ConnectionManager:
                         message_available = self.connection.poll(0.5)
                         if not message_available:
                             continue
-                        if self.connection.closed:
+                        if self.connection is None or self.connection.closed:
                             break
                         message = self.connection.recv()
                         if message == "close":
@@ -98,9 +75,10 @@ class ConnectionManager:
                             print("recived message", format_message(message))
                         self.emit_message(message)
                     except Exception as e:
+                        print(traceback.format_exc())
                         print("Error on reciving messages", e)
                         self.connection = None
-                        if self.shm and check_shared_memory_exists("krita-blender"):
+                        if self.shm and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)):
                             self.shm.unlink()
                             self.shm = None
                         break
@@ -112,7 +90,7 @@ class ConnectionManager:
 
     def disconnect(self):
         """gets called when user closes connection"""
-        if self.shm and check_shared_memory_exists("krita-blender"):
+        if self.shm and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)):
             self.shm.unlink()
         if self.connection:
             self.connection.close()
@@ -133,19 +111,20 @@ class ConnectionManager:
 
     def resize_memory(self, canvas_bytes_len):
         print("unlink")
-        if self.shm and check_shared_memory_exists("krita-blender"):
+        if self.shm and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)):
             self.shm.unlink()
             self.shm = None
 
         try:
             self.shm = shared_memory.SharedMemory(
-                name="krita-blender", create=True, size=canvas_bytes_len
+                name="krita-blender"+str(ConnectionManager.port), create=True, size=canvas_bytes_len
             )
             print("memory  created")
-        except Exception:
+        except Exception as e:
             print("file exists, trying another way")
+            print(e,"\n",traceback.print_exc())
             self.shm = shared_memory.SharedMemory(
-                name="krita-blender", create=False, size=canvas_bytes_len
+                name="krita-blender"+str(ConnectionManager.port), create=False, size=canvas_bytes_len
             )
 
     def send_message(self, message):
@@ -199,7 +178,8 @@ class ConnectionManager:
         return None
 
 
-def override_image(image, conn_manager):
+# on link function, here the shm is created
+def override_image(image, conn_manager: ConnectionManager): 
     doc = Krita.instance().activeDocument()
     depth = int(doc.colorDepth()[1:]) // 2
     size = [doc.width(), doc.height()]
@@ -255,7 +235,7 @@ def blender_image_as_new_layer(image_object, conn_manager):
         image_object["size"][0] * image_object["size"][1] * pixel_size * 4,
     )
     with shared_memory_context(
-        name="blender-krita",
+        name="blender-krita"+str(ConnectionManager.port),
         destroy=True,
         size=image_object["size"][0] * image_object["size"][1] * pixel_size * 4,
         create=True,
@@ -280,6 +260,18 @@ def blender_image_as_new_layer(image_object, conn_manager):
             )
             refresh_document(document)
 
+def open_as_new_document(image, conn_manager: ConnectionManager, link:bool = False):
+    x,y = image["size"]
+    newDocument = Krita.instance().createDocument(x, y, image["name"], "RGBA", "U8", "", 300.0)
+    bckg = newDocument.nodeByName("Background")
+    if bckg is not None:
+        bckg.remove()
+    Krita.instance().activeWindow().addView(newDocument)
+    blender_image_as_new_layer(image,conn_manager)
+    if link: 
+        asyncio.run(conn_manager.request({"type": "GET_UV_OVERLAY"}))
+        override_image(image,conn_manager)  
+        
 
 def change_memory(conn_manager: ConnectionManager):
     """function to resize memory if image data is changed"""
@@ -308,7 +300,6 @@ def change_memory(conn_manager: ConnectionManager):
     conn_manager.resize_memory(size[0] * size[1] * depth)
     asyncio.run(conn_manager.request({"data": active_image, "type": "OVERRIDE_IMAGE"}))
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
-
 
 def format_message(msg: object):
     """function that removes data if "noshow" flag is present, useful for not clogging terminal"""
