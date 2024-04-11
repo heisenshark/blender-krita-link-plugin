@@ -13,7 +13,11 @@ This plugin offers a seamless way to edit Blender images in Krita without the ne
 
 ![panel](panel.png)
 
-![demo](demo.gif)
+![](demo.mp4)
+
+<video controls>
+  <source src="demo.mp4" type="video/mp4">
+</video>
 
 
 ## Installation
