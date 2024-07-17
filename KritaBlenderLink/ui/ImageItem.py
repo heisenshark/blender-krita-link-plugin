@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QMenu,
 )
 from krita import Krita
-from KritaBlenderLink.connection import ConnectionManager, blender_image_as_new_layer, open_as_new_document, override_image
+from KritaBlenderLink.connection import ConnectionManager, blender_image_as_new_layer, open_as_new_document, link_image, link_layer
 
 class ImageItem(QWidget):
     def __init__(self, image,conn_manager: ConnectionManager, parent=None):
@@ -39,7 +39,7 @@ class ImageItem(QWidget):
         self.label_9 = QLabel(text=image["name"], parent=self)
         self.label_9.setObjectName("label_9")
         if image["name"] in self.conn_manager.linked_images.keys():
-            if self.conn_manager.linked_images[image['name']]["document"] == Krita.instance().activeDocument(): 
+            if self.conn_manager.linked_images[image["name"]]["document"] == Krita.instance().activeDocument(): 
                 self.label_9.setStyleSheet("font-weight: bold; color: green;")
             else:
                 self.label_9.setStyleSheet("font-weight: bold; color: #003300;")
@@ -78,10 +78,11 @@ class ImageItem(QWidget):
         openAsNewDocumentAct = cmenu.addAction("Open in new document")
 
         
-        if unlinkImageAct is None or linkImageAct is None:
+        if unlinkImageAct is None or linkImageAct is None or linkLayer is None:
             return
         unlinkImageAct.setDisabled(self.image["name"] not in self.conn_manager.linked_images.keys())
         linkImageAct.setDisabled(self.image["name"] in self.conn_manager.linked_images.keys())
+        linkLayer.setDisabled(self.image["name"] in self.conn_manager.linked_images.keys())
 
         if (
             hasattr(Krita, "instance")
@@ -100,7 +101,10 @@ class ImageItem(QWidget):
         print(action)
         if action == linkImageAct:
             print("link selected")
-            conn_manager.override_image(self.image,self.conn_manager) 
+            link_image(self.image,self.conn_manager) 
+        elif action == linkLayer:
+            print("linking layer")
+            link_layer(self.image,self.conn_manager)
         elif action == unlinkImageAct:
             print("unlinking image")
             self.conn_manager.remove_link(self.image["name"])
@@ -131,6 +135,6 @@ class ImageItem(QWidget):
             sleep(0.1)
             open_as_new_document(self.image,self.conn_manager,True)
         else:
-            override_image(self.image,self.conn_manager) 
+            link_image(self.image,self.conn_manager) 
         # return super().mouseDoubleClickEvent(a0)
 

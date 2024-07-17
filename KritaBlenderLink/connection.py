@@ -129,7 +129,7 @@ class ConnectionManager:
                 if listener.event_type == event_type:
                     listener.recieve_message(message=message)
 
-    def resize_memory(self, canvas_bytes_len,image_name):
+    def resize_memory(self, canvas_bytes_len:int,image_name:str):
         print("unlink")
         linked_image = self.linked_images[image_name]
         try:
@@ -138,21 +138,22 @@ class ConnectionManager:
 
         except Exception as e:
             print(e)
+        name ="krita-blender"+str(ConnectionManager.port)+"_"+str(image_name)
 
-        if linked_image["memoryObject"] and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)+"_"+str(image_name)):
+        if linked_image["memoryObject"] and check_shared_memory_exists(name):
             linked_image["memoryObject"].unlink()
             linked_image["memoryObject"] = None
 
         try:
             linked_image["memoryObject"] = shared_memory.SharedMemory(
-                name="krita-blender"+str(ConnectionManager.port)+"_"+str(image_name), create=True, size=canvas_bytes_len
+                name=name, create=True, size=canvas_bytes_len
             )
             print("memory  created")
         except Exception as e:
             print("file exists, trying another way")
             print(e,"\n",traceback.print_exc())
             linked_image["memoryObject"] = shared_memory.SharedMemory(
-                name="krita-blender"+str(ConnectionManager.port)+"_"+str(image_name), create=False, size=canvas_bytes_len
+                name=name, create=False, size=canvas_bytes_len
             )
 
     def send_message(self, message):
@@ -169,11 +170,10 @@ class ConnectionManager:
         shm.buf[: len(bts)] = bts
 
     def remove_link(self,image_name:str):
-        # self.linked_document = None
-        if image_name in self.linked_images.keys():
+        keys = [x for x in self.linked_images.keys()]
+        if image_name in keys:
             self.linked_images[image_name]["memoryObject"].unlink()
             del self.linked_images[image_name]
-        # asyncio.run(self.request({"data": "", "type": "REMOVE_LINK"}))
         asyncio.run(self.request({"data": "", "type": "GET_IMAGES"}))
 
     def get_image(self,image_name:str):
@@ -214,11 +214,10 @@ class ConnectionManager:
 
 
 # on link function, here the shm is created
-def override_image(image, conn_manager: ConnectionManager): 
+def link_image(image, conn_manager: ConnectionManager): 
     doc = Krita.instance().activeDocument()
     depth = int(doc.colorDepth()[1:]) // 2
     size = [doc.width(), doc.height()]
-    # conn_manager.linked_document = doc
     conn_manager.linked_images[image["name"]] = {
         "type":"document",
         "document":doc,
@@ -235,6 +234,22 @@ def override_image(image, conn_manager: ConnectionManager):
     print("resizing")
     conn_manager.resize_memory(size[0] * size[1] * depth,image["name"])
 
+    asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
+
+
+def link_layer(image, conn_manager: ConnectionManager): 
+    doc = Krita.instance().activeDocument()
+    depth = int(doc.colorDepth()[1:]) // 2
+    size = [doc.width(), doc.height()]
+    print(doc.activeNode())
+
+    conn_manager.linked_images[image["name"]] = {
+        "type":"layer",
+        "document":doc,
+        "layer":doc.activeNode(),
+        "memoryObject":None
+    }
+    conn_manager.resize_memory(size[0] * size[1] * depth,image["name"])
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
 
 
@@ -309,7 +324,7 @@ def open_as_new_document(image, conn_manager: ConnectionManager, link:bool = Fal
     blender_image_as_new_layer(image,conn_manager)
     if link: 
         asyncio.run(conn_manager.request({"type": "GET_UV_OVERLAY"}))
-        override_image(image,conn_manager)  
+        link_image(image,conn_manager)  
         
 
 def change_memory(conn_manager: ConnectionManager):
