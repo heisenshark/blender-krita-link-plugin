@@ -49,6 +49,7 @@ class BlenderKritaLink(DockWidget):
         self.connection = ConnectionManager()
         self.avc_connected = False
         self.refresh_time = 0 
+        self.last_doc = None
         ImageState.instance.onImageDataChange.connect(
             lambda x: [change_memory(self.connection), print("image file changed")]
         )
@@ -59,8 +60,9 @@ class BlenderKritaLink(DockWidget):
 
         app_notifier.imageClosed.connect(lambda: print("image Closed"))
         app_notifier.imageCreated.connect(lambda: print("image Created"))
-
-        app_notifier.viewCreated.connect(lambda: print("view Created"))
+        
+        app_notifier.viewClosed.connect(lambda: print("view closed!!!"))
+        app_notifier.viewCreated.connect(lambda x: print(x,"view Created"))
         app_notifier.windowCreated.connect(lambda: print("window Created"))
         app_notifier.applicationClosing.connect(lambda: print("app closing"))
 
@@ -237,6 +239,9 @@ class BlenderKritaLink(DockWidget):
             self.uv_overlay_debouncer.cal
         )
 
+        Krita.instance().notifier().viewClosed.connect(self.get_image_data)
+        Krita.instance().notifier().imageClosed.connect(self.get_image_data)
+
     def connect_blender(self):
         self.connection.connect(
             self.on_blender_connected,
@@ -264,13 +269,15 @@ class BlenderKritaLink(DockWidget):
         if self.connection is None or self.connection.connection is None:
             return 
         print("get_image_data log:  ",self.connection.linked_document, self.connection.linked_document in Krita.instance().documents())
-        for image_name, img in self.connection.linked_images.items():
+        images = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
+        self.central_widget.image_search.setText("")
+
+        ImageList.instance.refresh_signal.emit(images["data"])
+        kv = [(key,value) for key,value in self.connection.linked_images.items()]
+        for image_name, img in kv:
             if img["document"] not in Krita.instance().documents():
                 img["memoryObject"].unlink()
                 del self.connection.linked_images[image_name]
-
-        images = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
-        self.central_widget.image_search.setText("")
         ImageList.instance.refresh_signal.emit(images["data"])
 
     def refresh_document(self, doc):
@@ -282,15 +289,13 @@ class BlenderKritaLink(DockWidget):
         if self.connection is None:
             return
         doc = Krita.instance().activeDocument()
-        image_name = ""
         image_obj = None
 
         dupa_list= [(key,value) for key,value in self.connection.linked_images.items() if value["document"] == doc]
-        dupa_names = [key for (key,value) in dupa_list]
+        dupa_names = [key for (key,_) in dupa_list]
         print("dupa_names: ",dupa_names)
 
         for (key,value) in dupa_list:
-            image_name = key
             image_obj = value
             linked_doc = image_obj["document"]
 
@@ -313,7 +318,10 @@ class BlenderKritaLink(DockWidget):
             for key, value in dupa_list:
                 if self.central_widget.send_delay.value() > 0.0:
                     time.sleep(self.central_widget.send_delay.value())
-                pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
+                if value["type"] == "layer":
+                    pixelBytes = value["layer"].projectionPixelData(0, 0, doc.width(), doc.height())
+                else:
+                    pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
                 self.connection.write_memory(pixelBytes,value["memoryObject"])
 
             if self.refresh_time < time.time() -3:
