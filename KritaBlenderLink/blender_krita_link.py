@@ -39,7 +39,7 @@ class BlenderKritaLinkExtension(Extension):
 
 class BlenderKritaLink(DockWidget):
     listen_to_canvas_change = True
-    connection = None
+    connection :ConnectionManager | None = None
     advancedRefresh = 0 # 0 1 2 0-off 1-on 2-full
 
     def __init__(self):
@@ -139,7 +139,7 @@ class BlenderKritaLink(DockWidget):
             Settings.setSetting("port",ConnectionManager.port)
             print(f"port changed to: + {ConnectionManager.port}")
 
-        self.central_widget.connection_port.setValue(ConnectionManager.port if Settings.getSetting('port') is None else Settings.getSetting('port'))
+        self.central_widget.connection_port.setValue(ConnectionManager.port if Settings.getSetting("port") is None else Settings.getSetting("port"))
         self.central_widget.connection_port.textChanged.connect(on_port_change)
         
         def on_width_change(number):
@@ -207,8 +207,8 @@ class BlenderKritaLink(DockWidget):
             self.central_widget.uvs.setEnabled(self.connection.connection is not None)
 
             doc = Krita.instance().activeDocument()
-            linked_doc = self.connection.linked_document
-            self.central_widget.SendDataButton.setEnabled(not (doc != linked_doc or not linked_doc))
+            link_in_doc= len([(key,value) for key,value in self.connection.linked_images.items() if value["document"] == doc]) > 0
+            self.central_widget.SendDataButton.setEnabled(link_in_doc)
 
         disable_timer = QTimer(self)
         disable_timer.setInterval(100)
@@ -264,8 +264,11 @@ class BlenderKritaLink(DockWidget):
         if self.connection is None or self.connection.connection is None:
             return 
         print("get_image_data log:  ",self.connection.linked_document, self.connection.linked_document in Krita.instance().documents())
-        if self.connection.linked_document not in Krita.instance().documents():
-            self.connection.remove_link()
+        for image_name, img in self.connection.linked_images.items():
+            if img["document"] not in Krita.instance().documents():
+                img["memoryObject"].unlink()
+                del self.connection.linked_images[image_name]
+
         images = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
         self.central_widget.image_search.setText("")
         ImageList.instance.refresh_signal.emit(images["data"])
@@ -276,32 +279,47 @@ class BlenderKritaLink(DockWidget):
             root_node.setBlendingMode(root_node.blendingMode())
 
     def send_pixels(self):
+        if self.connection is None:
+            return
         doc = Krita.instance().activeDocument()
-        linked_doc = self.connection.linked_document
-        print(doc, linked_doc)
-        if doc != linked_doc or not linked_doc:
-            return
+        image_name = ""
+        image_obj = None
 
-        print(self.connection.get_active_image()["size"], [doc.width(), doc.height()])
+        dupa_list= [(key,value) for key,value in self.connection.linked_images.items() if value["document"] == doc]
+        dupa_names = [key for (key,value) in dupa_list]
+        print("dupa_names: ",dupa_names)
 
-        if self.connection.get_active_image()["size"] != [doc.width(), doc.height()]:
-            self.connection.remove_link()
-            return
-        if self.advancedRefresh == 1:
-            self.refresh_document(doc)
-        elif self.advancedRefresh == 2:
-            doc.refreshProjection()
+        for (key,value) in dupa_list:
+            image_name = key
+            image_obj = value
+            linked_doc = image_obj["document"]
+
+            if doc != linked_doc or not linked_doc:
+                return
+            blender_image = self.connection.get_image(key)
+            if blender_image["size"] != [doc.width(), doc.height()]:
+                self.connection.remove_link(key)
+                return
+
+            if self.advancedRefresh == 1:
+                self.refresh_document(doc)
+            elif self.advancedRefresh == 2:
+                doc.refreshProjection()
+            
+
 
         def write_mem():
-            if self.central_widget.send_delay.value() > 0.0:
-                time.sleep(self.central_widget.send_delay.value())
-            pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
-            self.connection.write_memory(pixelBytes)
             depth = Krita.instance().activeDocument().colorDepth()
+            for key, value in dupa_list:
+                if self.central_widget.send_delay.value() > 0.0:
+                    time.sleep(self.central_widget.send_delay.value())
+                pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
+                self.connection.write_memory(pixelBytes,value["memoryObject"])
+
             if self.refresh_time < time.time() -3:
                 self.refresh_time = time.time()
                 self.connection.send_message(
-                    {"type": "REFRESH", "depth": depth, "requestId": 2137, "data":{"size":[doc.width(),doc.height()]}}
+                    {"type": "REFRESH", "depth": depth, "requestId": 2137, "data":{"size":[doc.width(),doc.height()],"names":dupa_names}}
                 )
 
         Thread(target=write_mem).start()
