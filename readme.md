@@ -25,7 +25,7 @@ The plugin consists of two parts: one for Blender and one for Krita.
 #### version 4.2+
 - create a [scripts directory](https://docs.blender.org/manual/en/latest/editors/preferences/addons.html#prefs-extensions-install-legacy-addon) if you dont have one already and place `BlenderKritaLink` directory in it.
 #### other versions 
-- Place the `BlenderKritaLink` directory in the `blender/version/scripts/addons/` directory.
+- Place the `BlenderKritaLink` directory in `blender/version/scripts/addons/` or `~/.config/blender/version/scripts/addons` directory. 
 
 ### Krita Part
 - Place `KritaBlenderLink` and `KritaBlenderLink.desktop` in the `<kritainstallation>/pykrita/` directory.
