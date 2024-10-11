@@ -6,10 +6,11 @@ import asyncio
 from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
 from PyQt5 import uic, sip
 from PyQt5.QtWidgets import QColorDialog
-from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QByteArray, QTimer, QRect
+from PyQt5.QtGui import QColor, QPainter, QImage
 import time
 import  traceback
+from pprint import pprint
 
 from .connection import (
     ConnectionManager,
@@ -166,7 +167,7 @@ class BlenderKritaLink(DockWidget):
             self.send_pixels_debouncer.cal
         )
         self.central_widget.RefreshImagesButton.clicked.connect(self.get_image_data)
-        self.central_widget.ImageTosRGBButton.clicked.connect(self.open_image_settings)
+        self.central_widget.ExportUVButton.clicked.connect(self.uv_to_new_layer)
         self.central_widget.SelectUVIslandsButton.clicked.connect(
             self.select_uvs_debouncer.cal
         )
@@ -371,9 +372,6 @@ class BlenderKritaLink(DockWidget):
         my_overlay = UvOverlay(active_view)
         my_overlay.show()
 
-    def open_image_settings(self):
-        Krita.instance().action("image_properties").trigger()
-
     def select_uvs(self):
         uvs = asyncio.run(self.connection.request({"type": "SELECT_UVS"}))
         print(format_message(uvs))
@@ -397,6 +395,23 @@ class BlenderKritaLink(DockWidget):
             action.setData(faces)
             action.trigger()
             action.setData([])
+
+    def uv_to_new_layer(self):
+        krita_instance = Krita.instance()
+        document = krita_instance.activeDocument()
+        pprint(UvOverlay.INSTANCES_SET)
+        if document:
+            new_layer = document.createNode(
+                "UV_layer", "paintLayer"
+            )
+            document.rootNode().addChildNode(new_layer, None)
+            image = UvOverlay.exportImage(new_layer) 
+            
+            ptr = image.bits()
+            ptr.setsize(image.byteCount())
+            new_layer.setPixelData(QByteArray(ptr.asstring()), 0, 0, document.width(), document.height())
+
+            document.refreshProjection()
 
     def handle_uv_overlay(self, message):
         print("handle_uv_overlay")
