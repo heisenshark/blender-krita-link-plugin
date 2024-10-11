@@ -104,14 +104,18 @@ def register():
     bpy.app.timers.register(UvWatch.instance.check_for_changes, first_interval=0.5, persistent=True)
     bpy.app.timers.register(ImagesStateWatch.instance.check_for_changes, first_interval=0.5, persistent=True)
 
+
 def unregister():
     KritaConnection.LINK_INSTANCE.cleanup()
     bpy.utils.unregister_class(GlobalStore)
     bpy.utils.unregister_class(_PT_BlenderKritaLinkPanel)
-    bpy.app.timers.unregister(update_panel_watch)
     bpy.utils.unregister_class(DisconnectOperator)
-    bpy.app.timers.unregister(UvWatch.instance.check_for_changes)
-    bpy.app.timers.unregister(ImagesStateWatch.instance.check_for_changes)
+    if  bpy.app.timers.is_registered(update_panel_watch):
+        bpy.app.timers.unregister(update_panel_watch)
+    if  bpy.app.timers.is_registered(UvWatch.instance.check_for_changes):
+        bpy.app.timers.unregister(UvWatch.instance.check_for_changes)
+    if  bpy.app.timers.is_registered(ImagesStateWatch.instance.check_for_changes):
+        bpy.app.timers.unregister(ImagesStateWatch.instance.check_for_changes)
     del bpy.types.Scene.global_store 
 
 if __name__ == "__main__":
