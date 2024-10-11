@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>289</width>
+    <width>347</width>
     <height>438</height>
    </rect>
   </property>
@@ -51,7 +51,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>281</width>
+        <width>339</width>
         <height>430</height>
        </rect>
       </property>
@@ -486,14 +486,17 @@ border: 3px solid #8f8f91;
             </item>
            </layout>
           </item>
+          <item>
+           <widget class="QPushButton" name="ExportUVButton">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;creates new layer with current Uv layout&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Save UV</string>
+            </property>
+           </widget>
+          </item>
          </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="ImageTosRGBButton">
-         <property name="text">
-          <string>Image Settings</string>
-         </property>
         </widget>
        </item>
       </layout>

@@ -9,8 +9,9 @@ from PyQt5.QtCore import (
     QObject,
     QPointF,
     Qt,
+    QRect
 )
-from PyQt5.QtGui import QColor, QPainter, QPen, QPolygonF, QTransform
+from PyQt5.QtGui import QColor, QPainter, QPen, QPolygonF, QTransform, QImage
 from PyQt5.QtWidgets import (
     QAbstractScrollArea,
     QMdiArea,
@@ -19,7 +20,6 @@ from PyQt5.QtWidgets import (
     QOpenGLWidget,
 )
 
-from .settings import Settings
 
 
 def ruler_correction():
@@ -179,6 +179,31 @@ class UvOverlay(QWidget):
 
         finally:
             painter.end()
+
+    @staticmethod
+    def exportImage(layer): 
+        krita_instance = Krita.instance()
+        document = krita_instance.activeDocument()
+        if document:
+            image_data = layer.projectionPixelData(0, 0, document.width(), document.height())
+
+# Konwertuj dane do obrazu QImage
+            image = QImage(image_data, document.width(), document.height(), QImage.Format_ARGB32)
+            print(image)
+
+            painter = QPainter(image)
+            painter.translate(document.width()/2,document.height()/2)
+            painter.setRenderHint(QPainter.Antialiasing, True)
+            pen_weight = Settings.getSetting("uv_width") if Settings.getSetting("uv_width") is not None else 1
+            painter.setPen(QPen(UvOverlay.COLOR, pen_weight, Qt.SolidLine))
+
+            for p in UvOverlay.INSTANCES_SET[0]._polygons:
+                painter.drawPolygon(p)            
+            painter.end()
+            return image
+
+        else:
+            return None
 
     def eventFilter(self, obj, e):
         if e.type() == QEvent.Resize:
