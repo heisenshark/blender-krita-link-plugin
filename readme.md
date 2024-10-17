@@ -60,3 +60,9 @@ UVSelectionAddition is not required for the Python plugin to work but offers add
 ### Disclaimers
 This plugin is highly experimental and may contain bugs. If you wish to contribute or help improve it, feel free to contact me, make pull requests, or suggest improvements.
 This plugin probably does not work well on macos.
+
+### credits
+- (magic-uv)[https://github.com/nutti/Magic-UV] for some code to export uv islands
+- (some random code from krita artists)[https://krita-artists.org/t/canvas-render-how-to/31540] by user AkiR
+- Pribambase for showing how to do good blender integration plugin
+- krita and blender for nice foss
