@@ -57,9 +57,10 @@ class KritaConnection:
         if self.listener is not None:
             print("accepting")
             with Client(
-                ("localhost", KritaConnection.PORT), authkey=b"2137"
+                 self.listener.address, authkey=b"2137"
             ) as connection:
                 connection.send("close")
+                self.listener.close()
 
     def start(self):
         self.__STOP_SIGNAL = Event()
@@ -329,11 +330,13 @@ class KritaConnection:
                 pprint(e)
                 if KritaConnection.CONNECTION is not None:
                     KritaConnection.CONNECTION.close()
-                KritaConnection.CONNECTION = None
+
+            KritaConnection.CONNECTION = None
 
             listener.close()
             self.listener = None
             if self.__STOP_SIGNAL.is_set():
                 KritaConnection.STATUS = "listening"
+                # KritaConnection.CONNECTION = None
                 listener.close()
                 return
