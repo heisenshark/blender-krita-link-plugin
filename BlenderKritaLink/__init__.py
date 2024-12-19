@@ -24,19 +24,20 @@ def label_update(self, context):
     return None
 
 def port_update(self, context):
-    print("updating port")
     new_port = int(context.scene.global_store.connection_port)
+    print("updating port ", KritaConnection.PORT, new_port, KritaConnection.LINK_INSTANCE.listener,KritaConnection.CONNECTION)
     if new_port == KritaConnection.PORT:
         return 
     if KritaConnection.CONNECTION is not None:
         KritaConnection.PORT = new_port
         KritaConnection.CONNECTION.close()
     elif KritaConnection.LINK_INSTANCE.listener is not None:
-        KritaConnection.LINK_INSTANCE.timeout_listener()
         KritaConnection.PORT = new_port
+        KritaConnection.LINK_INSTANCE.timeout_listener()
     return 
 
 def update_panel_watch():
+    print("krita port", KritaConnection.PORT)
     try:
         if bpy.context.scene.global_store.label != KritaConnection.STATUS:
             print("updating panel watch", bpy.context.scene.global_store.label, KritaConnection.STATUS )
