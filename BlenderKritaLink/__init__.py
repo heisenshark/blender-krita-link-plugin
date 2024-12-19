@@ -38,7 +38,9 @@ def port_update(self, context):
 
 def update_panel_watch():
     try:
-        bpy.context.scene.global_store.label = KritaConnection.STATUS
+        if bpy.context.scene.global_store.label != KritaConnection.STATUS:
+            print("updating panel watch", bpy.context.scene.global_store.label, KritaConnection.STATUS )
+            bpy.context.scene.global_store.label = KritaConnection.STATUS
     except Exception as e:
         print(e,"\n",traceback.print_exc())
         print(e)
