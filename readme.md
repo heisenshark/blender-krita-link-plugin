@@ -58,7 +58,7 @@ The plugin consists of two parts: one for Blender and one for Krita.
         old.patches
         or []
         ++ [
-          ../../patches/uv-select.patch
+          ./patches/uv-select.patch
         ];
     });
   };
