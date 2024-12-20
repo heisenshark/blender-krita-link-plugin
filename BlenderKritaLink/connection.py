@@ -337,6 +337,5 @@ class KritaConnection:
             self.listener = None
             if self.__STOP_SIGNAL.is_set():
                 KritaConnection.STATUS = "listening"
-                # KritaConnection.CONNECTION = None
                 listener.close()
                 return
