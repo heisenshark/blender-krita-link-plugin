@@ -6,10 +6,11 @@ import asyncio
 from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
 from PyQt5 import uic, sip
 from PyQt5.QtWidgets import QColorDialog
-from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QByteArray, QTimer, QRect
+from PyQt5.QtGui import QColor, QPainter, QImage
 import time
 import  traceback
+from pprint import pprint
 
 from .connection import (
     ConnectionManager,
@@ -39,7 +40,7 @@ class BlenderKritaLinkExtension(Extension):
 
 class BlenderKritaLink(DockWidget):
     listen_to_canvas_change = True
-    connection = None
+    connection :ConnectionManager | None = None
     advancedRefresh = 0 # 0 1 2 0-off 1-on 2-full
 
     def __init__(self):
@@ -49,6 +50,7 @@ class BlenderKritaLink(DockWidget):
         self.connection = ConnectionManager()
         self.avc_connected = False
         self.refresh_time = 0 
+        self.last_doc = None
         ImageState.instance.onImageDataChange.connect(
             lambda x: [change_memory(self.connection), print("image file changed")]
         )
@@ -59,8 +61,9 @@ class BlenderKritaLink(DockWidget):
 
         app_notifier.imageClosed.connect(lambda: print("image Closed"))
         app_notifier.imageCreated.connect(lambda: print("image Created"))
-
-        app_notifier.viewCreated.connect(lambda: print("view Created"))
+        
+        app_notifier.viewClosed.connect(lambda: print("view closed!!!"))
+        app_notifier.viewCreated.connect(lambda x: print(x,"view Created"))
         app_notifier.windowCreated.connect(lambda: print("window Created"))
         app_notifier.applicationClosing.connect(lambda: print("app closing"))
 
@@ -139,7 +142,7 @@ class BlenderKritaLink(DockWidget):
             Settings.setSetting("port",ConnectionManager.port)
             print(f"port changed to: + {ConnectionManager.port}")
 
-        self.central_widget.connection_port.setValue(ConnectionManager.port if Settings.getSetting('port') is None else Settings.getSetting('port'))
+        self.central_widget.connection_port.setValue(ConnectionManager.port if Settings.getSetting("port") is None else Settings.getSetting("port"))
         self.central_widget.connection_port.textChanged.connect(on_port_change)
         
         def on_width_change(number):
@@ -164,7 +167,7 @@ class BlenderKritaLink(DockWidget):
             self.send_pixels_debouncer.cal
         )
         self.central_widget.RefreshImagesButton.clicked.connect(self.get_image_data)
-        self.central_widget.ImageTosRGBButton.clicked.connect(self.open_image_settings)
+        self.central_widget.ExportUVButton.clicked.connect(self.uv_to_new_layer)
         self.central_widget.SelectUVIslandsButton.clicked.connect(
             self.select_uvs_debouncer.cal
         )
@@ -207,8 +210,8 @@ class BlenderKritaLink(DockWidget):
             self.central_widget.uvs.setEnabled(self.connection.connection is not None)
 
             doc = Krita.instance().activeDocument()
-            linked_doc = self.connection.linked_document
-            self.central_widget.SendDataButton.setEnabled(not (doc != linked_doc or not linked_doc))
+            link_in_doc= len([(key,value) for key,value in self.connection.linked_images.items() if value["document"] == doc]) > 0
+            self.central_widget.SendDataButton.setEnabled(link_in_doc)
 
         disable_timer = QTimer(self)
         disable_timer.setInterval(100)
@@ -237,6 +240,9 @@ class BlenderKritaLink(DockWidget):
             self.uv_overlay_debouncer.cal
         )
 
+        Krita.instance().notifier().viewClosed.connect(self.get_image_data)
+        Krita.instance().notifier().imageClosed.connect(self.get_image_data)
+
     def connect_blender(self):
         self.connection.connect(
             self.on_blender_connected,
@@ -264,10 +270,15 @@ class BlenderKritaLink(DockWidget):
         if self.connection is None or self.connection.connection is None:
             return 
         print("get_image_data log:  ",self.connection.linked_document, self.connection.linked_document in Krita.instance().documents())
-        if self.connection.linked_document not in Krita.instance().documents():
-            self.connection.remove_link()
         images = asyncio.run(self.connection.request({"type": "GET_IMAGES"}))
         self.central_widget.image_search.setText("")
+
+        ImageList.instance.refresh_signal.emit(images["data"])
+        kv = [(key,value) for key,value in self.connection.linked_images.items()]
+        for image_name, img in kv:
+            if img["document"] not in Krita.instance().documents():
+                img["memoryObject"].unlink()
+                del self.connection.linked_images[image_name]
         ImageList.instance.refresh_signal.emit(images["data"])
 
     def refresh_document(self, doc):
@@ -276,32 +287,48 @@ class BlenderKritaLink(DockWidget):
             root_node.setBlendingMode(root_node.blendingMode())
 
     def send_pixels(self):
+        if self.connection is None:
+            return
         doc = Krita.instance().activeDocument()
-        linked_doc = self.connection.linked_document
-        print(doc, linked_doc)
-        if doc != linked_doc or not linked_doc:
-            return
+        image_obj = None
 
-        print(self.connection.get_active_image()["size"], [doc.width(), doc.height()])
+        dupa_list= [(key,value) for key,value in self.connection.linked_images.items() if value["document"] == doc]
+        dupa_names = [key for (key,_) in dupa_list]
+        print("dupa_names: ",dupa_names)
 
-        if self.connection.get_active_image()["size"] != [doc.width(), doc.height()]:
-            self.connection.remove_link()
-            return
-        if self.advancedRefresh == 1:
-            self.refresh_document(doc)
-        elif self.advancedRefresh == 2:
-            doc.refreshProjection()
+        for (key,value) in dupa_list:
+            image_obj = value
+            linked_doc = image_obj["document"]
+
+            if doc != linked_doc or not linked_doc:
+                return
+            blender_image = self.connection.get_image(key)
+            if blender_image["size"] != [doc.width(), doc.height()]:
+                self.connection.remove_link(key)
+                return
+
+            if self.advancedRefresh == 1:
+                self.refresh_document(doc)
+            elif self.advancedRefresh == 2:
+                doc.refreshProjection()
+            
+
 
         def write_mem():
-            if self.central_widget.send_delay.value() > 0.0:
-                time.sleep(self.central_widget.send_delay.value())
-            pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
-            self.connection.write_memory(pixelBytes)
             depth = Krita.instance().activeDocument().colorDepth()
+            for key, value in dupa_list:
+                if self.central_widget.send_delay.value() > 0.0:
+                    time.sleep(self.central_widget.send_delay.value())
+                if value["type"] == "layer":
+                    pixelBytes = value["layer"].projectionPixelData(0, 0, doc.width(), doc.height())
+                else:
+                    pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
+                self.connection.write_memory(pixelBytes,value["memoryObject"])
+
             if self.refresh_time < time.time() -3:
                 self.refresh_time = time.time()
                 self.connection.send_message(
-                    {"type": "REFRESH", "depth": depth, "requestId": 2137, "data":{"size":[doc.width(),doc.height()]}}
+                    {"type": "REFRESH", "depth": depth, "requestId": 2137, "data":{"size":[doc.width(),doc.height()],"names":dupa_names}}
                 )
 
         Thread(target=write_mem).start()
@@ -345,9 +372,6 @@ class BlenderKritaLink(DockWidget):
         my_overlay = UvOverlay(active_view)
         my_overlay.show()
 
-    def open_image_settings(self):
-        Krita.instance().action("image_properties").trigger()
-
     def select_uvs(self):
         uvs = asyncio.run(self.connection.request({"type": "SELECT_UVS"}))
         print(format_message(uvs))
@@ -371,6 +395,23 @@ class BlenderKritaLink(DockWidget):
             action.setData(faces)
             action.trigger()
             action.setData([])
+
+    def uv_to_new_layer(self):
+        krita_instance = Krita.instance()
+        document = krita_instance.activeDocument()
+        pprint(UvOverlay.INSTANCES_SET)
+        if document:
+            new_layer = document.createNode(
+                "UV_layer", "paintLayer"
+            )
+            document.rootNode().addChildNode(new_layer, None)
+            image = UvOverlay.exportImage(new_layer) 
+            
+            ptr = image.bits()
+            ptr.setsize(image.byteCount())
+            new_layer.setPixelData(QByteArray(ptr.asstring()), 0, 0, document.width(), document.height())
+
+            document.refreshProjection()
 
     def handle_uv_overlay(self, message):
         print("handle_uv_overlay")

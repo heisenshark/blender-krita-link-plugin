@@ -79,7 +79,6 @@ class ImagesStateWatch():
                             image.filepath
                         ),
                         "size": [image.size[0], image.size[1]],
-                        "isActive": ImageManager.INSTANCE.IMAGE_NAME == image.name,
                     }
                 )
             self.last_hash = new_hash
