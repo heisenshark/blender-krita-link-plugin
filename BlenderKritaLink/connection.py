@@ -5,7 +5,7 @@ import bpy
 import numpy as np
 import traceback
 from .image_manager import ImageManager
-from .uv_extractor import getUvData, getUvOverlay
+from .uv_extractor import getUvOverlay
 from pprint import pprint
 from contextlib import contextmanager
 
@@ -57,9 +57,10 @@ class KritaConnection:
         if self.listener is not None:
             print("accepting")
             with Client(
-                ("localhost", KritaConnection.PORT), authkey=b"2137"
+                 self.listener.address, authkey=b"2137"
             ) as connection:
                 connection.send("close")
+                self.listener.close()
 
     def start(self):
         self.__STOP_SIGNAL = Event()
@@ -163,44 +164,45 @@ class KritaConnection:
             case "REFRESH":
                 size = msg["data"]["size"]
                 pixelsize = int(msg["depth"][1:])//8
+                for image in msg["data"]["names"]:
                 
-                with shared_memory_context(
-                    name="krita-blender"+str(KritaConnection.PORT),
-                    size=size[0]*size[1]*pixelsize*4,
-                    destroy=False,
-                    create=False,
-                ) as existing_shm:
-                    print("refresh initiated", len(existing_shm.buf))
-                    self.update_message("got The Image")
-                    pixels_array = None
-                    match msg["depth"]:
-                        case "F32":
-                            pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.float32, count=size[0]*size[1]*4
-                            )
-                        case "F16":
-                            pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.float16, count=size[0]*size[1]*4
-                            )
-                        case "U8":
-                            pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.uint8, count=size[0]*size[1]*4
-                            )
-                        case "U16":
-                            pixels_array = np.frombuffer(
-                                existing_shm.buf, dtype=np.uint16, count=size[0]*size[1]*4
-                            )
-                    
-                    print("refresh initiated")
-                    try:
-                        ImageManager.UPDATING_IMAGE.acquire()
-                        ImageManager.INSTANCE.mirror_image(pixels_array)
+                    with shared_memory_context(
+                        name="krita-blender"+str(KritaConnection.PORT)+"_"+image,
+                        size=size[0]*size[1]*pixelsize*4,
+                        destroy=False,
+                        create=False,
+                    ) as existing_shm:
+                        print("refresh initiated", len(existing_shm.buf))
+                        self.update_message("got The Image")
                         pixels_array = None
-                    finally:
-                        pixels_array = None
-                        ImageManager.UPDATING_IMAGE.release()
-                    print("refresh complete")
-                    self.update_message("connected")
+                        match msg["depth"]:
+                            case "F32":
+                                pixels_array = np.frombuffer(
+                                    existing_shm.buf, dtype=np.float32, count=size[0]*size[1]*4
+                                )
+                            case "F16":
+                                pixels_array = np.frombuffer(
+                                    existing_shm.buf, dtype=np.float16, count=size[0]*size[1]*4
+                                )
+                            case "U8":
+                                pixels_array = np.frombuffer(
+                                    existing_shm.buf, dtype=np.uint8, count=size[0]*size[1]*4
+                                )
+                            case "U16":
+                                pixels_array = np.frombuffer(
+                                    existing_shm.buf, dtype=np.uint16, count=size[0]*size[1]*4
+                                )
+                        
+                        print("refresh initiated")
+                        try:
+                            ImageManager.UPDATING_IMAGE.acquire()
+                            ImageManager.INSTANCE.update_image(pixels_array,image)
+                            pixels_array = None
+                        finally:
+                            pixels_array = None
+                            ImageManager.UPDATING_IMAGE.release()
+                        print("refresh complete")
+                        self.update_message("connected")
                     conn.send(
                         {
                             "type": "REFRESH",
@@ -220,8 +222,6 @@ class KritaConnection:
                                 image.filepath
                             ),
                             "size": [image.size[0], image.size[1]],
-                            "isActive": ImageManager.INSTANCE.IMAGE_NAME
-                            == image.name,
                         }
                     )
 
@@ -234,19 +234,6 @@ class KritaConnection:
                     }
                 )
                 print("message sent")
-
-            case "OVERRIDE_IMAGE":
-                print("overriding image: ", msg["data"]["name"])
-                ImageManager.INSTANCE.set_image_name(
-                    msg["data"]["name"]
-                )
-                conn.send(
-                    {
-                        "type": "OVERRIDE_IMAGE",
-                        "data": "",
-                        "requestId": msg["requestId"],
-                    }
-                )
 
             case "REMOVE_LINK":
                 ImageManager.INSTANCE.set_image_name(None)
@@ -343,7 +330,8 @@ class KritaConnection:
                 pprint(e)
                 if KritaConnection.CONNECTION is not None:
                     KritaConnection.CONNECTION.close()
-                KritaConnection.CONNECTION = None
+
+            KritaConnection.CONNECTION = None
 
             listener.close()
             self.listener = None

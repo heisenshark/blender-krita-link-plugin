@@ -45,10 +45,11 @@ class ImageList(QListWidget):
         print("items to be removed", len(images_list))
         def compute_index(text):
             return text.upper().find(str_filter.upper()) if str_filter is not None else 1 
+        if len(images_list) > 10: 
+            images_list.sort(key= lambda x:compute_index(x["name"]) - 1000 if x["name"] in self.conn_manager.linked_images.keys() else 0)
 
-        images_list.sort(key= lambda x:compute_index(x['name']) - 1000 if x["isActive"] else 0)
         for image in images_list:
-            if str_filter is not None and image['name'].upper().find(str_filter.upper()) < 0:
+            if str_filter is not None and image["name"].upper().find(str_filter.upper()) < 0:
                 continue
             if image["size"][0] == 0 or image["size"][1] == 0:
                 continue
@@ -62,7 +63,6 @@ class ImageList(QListWidget):
             self.addItem(listItem)
             self.setItemWidget(listItem, item)
         ImageList.image_list = images_list
-        # print(ImageList.image_list, "<--- here is the image list!!!")
 
     def clear_images_list(self):
         self.clear()
