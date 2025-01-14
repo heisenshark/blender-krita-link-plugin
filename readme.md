@@ -2,6 +2,8 @@
 
 This plugin offers a seamless way to edit Blender images in Krita without the need for file reloads.
 
+# [Download Page](https://github.com/heisenshark/blender-krita-link-plugin/releases)
+
 [Krita Artists post](https://krita-artists.org/t/blender-krita-link-plugin-for-texture-editing-in-krita/83980)
 
 ## Features
