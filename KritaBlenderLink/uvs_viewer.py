@@ -8,8 +8,7 @@ from PyQt5.QtCore import (
     QEvent,
     QObject,
     QPointF,
-    Qt,
-    QRect
+    Qt
 )
 from PyQt5.QtGui import QColor, QPainter, QPen, QPolygonF, QTransform, QImage
 from PyQt5.QtWidgets import (
@@ -56,10 +55,6 @@ def get_q_view(view):
 
 
 def get_transform(view):
-    def _offset(scroller):
-        mid = (scroller.minimum() + scroller.maximum()) / 2.0
-        return -(scroller.value() - mid)
-
     canvas = view.canvas()
     document = view.document()
     q_view = get_q_view(view)
@@ -67,13 +62,14 @@ def get_transform(view):
         print("view is none")
         return QTransform()
 
-    area = q_view.findChild(QAbstractScrollArea)
     zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
     transform = QTransform()
-    transform.translate(
-        _offset(area.horizontalScrollBar()), _offset(area.verticalScrollBar())
-    )
+
+    transform.translate(view.flakeToCanvasTransform().dx(),view.flakeToCanvasTransform().dy())
     transform.rotate(canvas.rotation())
+
+    transform.translate(document.width()*zoom/2,document.height()*zoom/2)
+
     transform.scale(zoom, zoom)
     return transform
 
@@ -166,7 +162,7 @@ class UvOverlay(QWidget):
             return
         try:
             painter.setRenderHint(QPainter.Antialiasing, True)
-            painter.translate(self.rect().center())
+            painter.translate(self.rect().topLeft())
             painter.setTransform(get_transform(self.view), combine=True)
             painter.setPen(Qt.NoPen)
 
@@ -214,12 +210,6 @@ class UvOverlay(QWidget):
         # print("resize !!!! ")
         q_canvas = self.parent().findChild(QAbstractScrollArea).viewport()
         x, y = ruler_correction()
-        # print(
-        #     q_canvas.x(),
-        #     q_canvas.y(),
-        #     q_canvas.geometry().width(),
-        #     q_canvas.geometry().height(),
-        # )
         self.setGeometry(
             x, y, q_canvas.geometry().width(), q_canvas.geometry().height()
         )

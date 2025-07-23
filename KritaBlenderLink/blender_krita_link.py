@@ -6,11 +6,10 @@ import asyncio
 from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
 from PyQt5 import uic, sip
 from PyQt5.QtWidgets import QColorDialog
-from PyQt5.QtCore import QByteArray, QTimer, QRect
-from PyQt5.QtGui import QColor, QPainter, QImage
+from PyQt5.QtCore import QByteArray, QTimer
+from PyQt5.QtGui import QColor
 import time
 import  traceback
-from pprint import pprint
 
 from .connection import (
     ConnectionManager,
@@ -399,7 +398,6 @@ class BlenderKritaLink(DockWidget):
     def uv_to_new_layer(self):
         krita_instance = Krita.instance()
         document = krita_instance.activeDocument()
-        pprint(UvOverlay.INSTANCES_SET)
         if document:
             new_layer = document.createNode(
                 "UV_layer", "paintLayer"
