@@ -1,9 +1,9 @@
 import bpy
 
 from BlenderKritaLink.watch import UvWatch,ImagesStateWatch
-from .ui import _PT_BlenderKritaLinkPanel
-from .image_manager import ImageManager
 from .connection import KritaConnection
+from .image_manager import ImageManager
+from .ui import _PT_BlenderKritaLinkPanel
 
 bl_info = {
     "name": "Blender Krita link",
@@ -13,7 +13,6 @@ bl_info = {
     "category": "Paint",
     "description":"companion to blender krita link plugin, shows connection status and updates images"
 }
-
 
 def label_update(self, context):
     if context is None or context.area is None or context.area.regions is None:
@@ -110,7 +109,7 @@ def register():
 def unregister():
     KritaConnection.LINK_INSTANCE.cleanup()
     bpy.utils.unregister_class(GlobalStore)
-    bpy.utils.unregister_class(_PT_BlenderKritaLinkPanel)
+    # bpy.utils.unregister_class(_PT_BlenderKritaLinkPanel)
     bpy.utils.unregister_class(DisconnectOperator)
     if  bpy.app.timers.is_registered(update_panel_watch):
         bpy.app.timers.unregister(update_panel_watch)
