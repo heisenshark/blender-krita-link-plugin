@@ -1,5 +1,5 @@
 from krita import Krita, Notifier, QtWidgets
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt6.QtCore import pyqtSignal, QObject
 
 
 class ImageState(QObject):
@@ -69,7 +69,7 @@ class ImageState(QObject):
         self.data = self.get_data()
 
     def setup_listening(self):
-        QtWidgets.qApp.installEventFilter(self)
+        QtWidgets.QApplication.instance().installEventFilter(self)
 
         def history_emit(_):
             self.data["paint"] = False

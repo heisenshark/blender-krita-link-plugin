@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QListWidget, QWidget, QSizePolicy, QListWidgetItem
-from PyQt5.QtCore import pyqtSignal, QSize
+from PyQt6.QtWidgets import QListWidget, QWidget, QSizePolicy, QListWidgetItem
+from PyQt6.QtCore import pyqtSignal, QSize
 from .ImageItem import ImageItem
 from KritaBlenderLink.connection import (
     ConnectionManager,

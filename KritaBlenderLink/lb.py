@@ -1,6 +1,6 @@
 import time
 from threading import Timer
-from PyQt5.QtCore import QObject, QEvent
+from PyQt6.QtCore import QObject, QEvent
 from multiprocessing import shared_memory
 from contextlib import contextmanager
 

@@ -3,23 +3,23 @@ from __future__ import annotations
 
 from .settings import Settings
 from krita import Krita
-from PyQt5 import sip
-from PyQt5.QtCore import (
+from PyQt6 import sip
+from PyQt6.QtCore import (
     QEvent,
     QObject,
     QPointF,
     Qt
 )
-from PyQt5.QtGui import QColor, QPainter, QPen, QPolygonF, QTransform, QImage
-from PyQt5.QtWidgets import (
+from PyQt6.QtGui import QColor, QPainter, QPen, QPolygonF, QTransform, QImage
+from PyQt6.QtWidgets import (
     QAbstractScrollArea,
     QMdiArea,
     QMdiSubWindow,
     QWidget,
-    QOpenGLWidget,
 )
 
-
+from PyQt6.QtOpenGLWidgets import (
+    QOpenGLWidget)
 
 def ruler_correction():
     qwin = Krita.instance().activeWindow().qwindow()

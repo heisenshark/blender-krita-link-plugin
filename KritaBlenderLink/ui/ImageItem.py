@@ -1,5 +1,5 @@
 from time import sleep
-from PyQt5.QtWidgets import (
+from PyQt6.QtWidgets import (
     QWidget,
     QSizePolicy,
     QHBoxLayout,
