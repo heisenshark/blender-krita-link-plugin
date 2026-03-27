@@ -97,7 +97,7 @@ class ImageItem(QWidget):
             unlinkImageAct.setDisabled(True)
             linkImageAct.setDisabled(True)
         
-        action = cmenu.exec_(self.mapToGlobal(event.pos()))
+        action = cmenu.exec(self.mapToGlobal(event.pos()))
         print(action)
         if action == linkImageAct:
             print("link selected")
