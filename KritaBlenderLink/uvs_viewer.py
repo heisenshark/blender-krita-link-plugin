@@ -80,7 +80,7 @@ class VieportResizeListener(QObject):
         self.function = function
 
     def eventFilter(self, obj, e):
-        if e.type() == QEvent.Resize:
+        if e.type() == QEvent.Type.Resize:
             print("resize handle from canvas")
             self.function()
         return super().eventFilter(obj, e)
@@ -104,8 +104,8 @@ class UvOverlay(QWidget):
         UvOverlay.INSTANCES_SET.append(self)
         self.setObjectName("UVOVERLAY")
 
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
-        self.setFocusPolicy(Qt.NoFocus)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         q_canvas = parent.findChild(QAbstractScrollArea).viewport()
 
         self.ls = VieportResizeListener(self.resize_handle)
@@ -161,15 +161,15 @@ class UvOverlay(QWidget):
         if not show_uv:
             return
         try:
-            painter.setRenderHint(QPainter.Antialiasing, True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
             painter.translate(self.rect().topLeft())
             painter.setTransform(get_transform(self.view), combine=True)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
 
             document = view.document()
             zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
             pen_weight = Settings.getSetting("uv_width") if Settings.getSetting("uv_width") is not None else 1
-            painter.setPen(QPen(UvOverlay.COLOR, 0.5 * pen_weight / zoom, Qt.SolidLine))
+            painter.setPen(QPen(UvOverlay.COLOR, 0.5 * pen_weight / zoom, Qt.PenStyle.SolidLine))
             for p in self._polygons:
                 painter.drawPolygon(p)
 
@@ -189,9 +189,9 @@ class UvOverlay(QWidget):
 
             painter = QPainter(image)
             painter.translate(document.width()/2,document.height()/2)
-            painter.setRenderHint(QPainter.Antialiasing, True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
             pen_weight = Settings.getSetting("uv_width") if Settings.getSetting("uv_width") is not None else 1
-            painter.setPen(QPen(UvOverlay.COLOR, pen_weight, Qt.SolidLine))
+            painter.setPen(QPen(UvOverlay.COLOR, pen_weight, Qt.PenStyle.SolidLine))
 
             for p in UvOverlay.INSTANCES_SET[0]._polygons:
                 painter.drawPolygon(p)            
@@ -202,7 +202,7 @@ class UvOverlay(QWidget):
             return None
 
     def eventFilter(self, obj, e):
-        if e.type() == QEvent.Resize:
+        if e.type() == QEvent.Type.Resize:
             self.resize_handle()
         return super().eventFilter(obj, e)
 

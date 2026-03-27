@@ -15,15 +15,18 @@ class ImageList(QListWidget):
     def __init__(
         self, con_manager: ConnectionManager, parent: QWidget
     ) -> None:
+        print("end1")
+        super().__init__(parent)
         ImageList.instance = self
         self.conn_manager = con_manager
-        super().__init__(parent)
+        print("end1")
         self.setObjectName("ImageList")
         self.setObjectName("scrollArea")
         self.setMinimumSize(QSize(0, 40))
+        print("end!!!")
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(

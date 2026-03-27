@@ -196,6 +196,7 @@ class BlenderKritaLink(DockWidget):
             self.uv_overlay_debouncer.cal
         )
 
+        # here is the issue
         ImageList(parent=self.central_widget.ImagesFrame, con_manager=self.connection)
         self.central_widget.ImagesFrame.layout().addWidget(ImageList.instance)
 

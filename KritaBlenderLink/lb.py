@@ -43,11 +43,11 @@ class ColorButtonFilter(QObject):
         self.wheel_handler = wheel_handler 
 
     def eventFilter(self, obj, event):
-        if event.type() == QEvent.MouseButtonPress:
+        if event.type() == QEvent.Type.MouseButtonPress:
             if self.function:
                 self.function()
             return True
-        if event.type() == QEvent.Wheel:
+        if event.type() == QEvent.Type.Wheel:
             print(event.angleDelta())
             if self.wheel_handler:
                 self.wheel_handler(event.angleDelta())

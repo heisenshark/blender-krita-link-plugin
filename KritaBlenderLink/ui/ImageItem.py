@@ -28,7 +28,7 @@ class ImageItem(QWidget):
             width = document.width()
 
         self.setObjectName("ListItem")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
@@ -53,14 +53,14 @@ class ImageItem(QWidget):
         self.label_size.setObjectName("label_size")
 
         self.horizontalSpacer_2 = QSpacerItem(
-            40, 10, QSizePolicy.Expanding, QSizePolicy.Minimum
+            40, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
 
         self.horizontalLayout_2.addWidget(self.label_size)
 
-        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
         self.setLayout(self.horizontalLayout_2)
