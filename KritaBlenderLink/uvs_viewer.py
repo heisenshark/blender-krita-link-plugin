@@ -62,7 +62,7 @@ def get_transform(view):
         print("view is none")
         return QTransform()
 
-    zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
+    zoom = (canvas.zoomLevel())
     transform = QTransform()
 
     transform.translate(view.flakeToCanvasTransform().dx(),view.flakeToCanvasTransform().dy())
@@ -167,7 +167,7 @@ class UvOverlay(QWidget):
             painter.setPen(Qt.PenStyle.NoPen)
 
             document = view.document()
-            zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
+            zoom = (canvas.zoomLevel())
             pen_weight = Settings.getSetting("uv_width") if Settings.getSetting("uv_width") is not None else 1
             painter.setPen(QPen(UvOverlay.COLOR, 0.5 * pen_weight / zoom, Qt.PenStyle.SolidLine))
             for p in self._polygons:
