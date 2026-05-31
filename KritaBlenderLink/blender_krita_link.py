@@ -457,7 +457,7 @@ class BlenderKritaLink(DockWidget):
             image = UvOverlay.exportImage(new_layer)
 
             ptr = image.bits()
-            ptr.setsize(image.byteCount())
+            ptr.setsize(image.sizeInBytes())
             new_layer.setPixelData(
                 QByteArray(ptr.asstring()), 0, 0, document.width(), document.height()
             )

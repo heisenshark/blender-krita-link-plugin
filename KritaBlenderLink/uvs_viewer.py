@@ -184,7 +184,7 @@ class UvOverlay(QWidget):
             image_data = layer.projectionPixelData(0, 0, document.width(), document.height())
 
 # Konwertuj dane do obrazu QImage
-            image = QImage(image_data, document.width(), document.height(), QImage.Format_ARGB32)
+            image = QImage(image_data, document.width(), document.height(), QImage.Format.Format_ARGB32)
             print(image)
 
             painter = QPainter(image)
