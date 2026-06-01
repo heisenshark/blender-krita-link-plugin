@@ -90,7 +90,7 @@ class BlenderKritaLink(DockWidget):
                     uo.update()
 
         self.central_widget.ShowUVCheckbox.setCheckState(
-            Qt.CheckState.Checked if Settings.getSetting("showUVs") else Qt.CheckState.UnChecked
+            Qt.CheckState.Checked if Settings.getSetting("showUVs") else Qt.CheckState.Unchecked
         )
         self.central_widget.ShowUVCheckbox.stateChanged.connect(on_uv_show)
 
@@ -264,7 +264,7 @@ class BlenderKritaLink(DockWidget):
         def uv_show_toggle(_):
             toggled_state = not Settings.getSetting("showUVs")
             Settings.setSetting("showUVs", toggled_state)
-            self.central_widget.ShowUVCheckbox.setCheckState(Qt.CheckState.Checked if toggled_state else Qt.CheckState.UnChecked)
+            self.central_widget.ShowUVCheckbox.setCheckState(Qt.CheckState.Checked if toggled_state else Qt.CheckState.Unchecked)
             for uo in UvOverlay.INSTANCES_SET:
                 if not sip.isdeleted(uo):
                     uo.update()
