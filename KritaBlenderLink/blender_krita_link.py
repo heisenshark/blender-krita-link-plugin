@@ -21,6 +21,7 @@ from .ui.ImageList import ImageList
 from .settings import Settings
 from .ImageState import ImageState
 from .lb import ColorButtonFilter, Debouncer
+from .logger import logger
 
 DOCKER_TITLE = "Blender Krita Link"
 
@@ -45,27 +46,27 @@ class BlenderKritaLink(DockWidget):
 
     def __init__(self):
         super().__init__()
-        print("Docker init!!!")
-        print(Settings.getSetting("listenCanvas"))
+        logger.info("Docker init!!!")
+        logger.debug("Settings listenCanvas: %s", Settings.getSetting("listenCanvas"))
         self.connection = ConnectionManager()
         self.avc_connected = False
         self.refresh_time = 0
         self.last_doc = None
         ImageState.instance.onImageDataChange.connect(
-            lambda x: [change_memory(self.connection), print("image file changed")]
+            lambda x: [change_memory(self.connection), logger.info("image file changed")]
         )
         ImageState.instance.onPixelsChange.connect(
-            lambda x: self.on_update_image(x) and print("drawed smh")
+            lambda x: self.on_update_image(x) and logger.debug("drawed smh")
         )
         app_notifier: Notifier = Krita.instance().notifier()
 
-        app_notifier.imageClosed.connect(lambda: print("image Closed"))
-        app_notifier.imageCreated.connect(lambda: print("image Created"))
+        app_notifier.imageClosed.connect(lambda: logger.info("image Closed"))
+        app_notifier.imageCreated.connect(lambda: logger.info("image Created"))
 
-        app_notifier.viewClosed.connect(lambda: print("view closed!!!"))
-        app_notifier.viewCreated.connect(lambda x: print(x, "view Created"))
-        app_notifier.windowCreated.connect(lambda: print("window Created"))
-        app_notifier.applicationClosing.connect(lambda: print("app closing"))
+        app_notifier.viewClosed.connect(lambda: logger.info("view closed!!!"))
+        app_notifier.viewCreated.connect(lambda x: logger.info("view Created: %s", x))
+        app_notifier.windowCreated.connect(lambda: logger.info("window Created"))
+        app_notifier.applicationClosing.connect(lambda: logger.info("app closing"))
 
         self.setWindowTitle("Blender Krita Link")
         self.central_widget = uic.loadUi(
@@ -83,7 +84,7 @@ class BlenderKritaLink(DockWidget):
         )
 
         def on_uv_show(state):
-            print("uvshow changed", state)
+            logger.info("uvshow changed %s", state)
             Settings.setSetting("showUVs", state == 2)
             for uo in UvOverlay.INSTANCES_SET:
                 if not sip.isdeleted(uo):
@@ -120,7 +121,7 @@ class BlenderKritaLink(DockWidget):
 
             c = QColor()
             c.setHsv(color[0], color[1], color[2], color[3])
-            print(color)
+            logger.debug("uvColor wheel handler Hsv: %s", color)
             UvOverlay.COLOR = c
             color = Settings.setSetting("uvColor", c.name(QColor.NameFormat.HexArgb))
             self.central_widget.UVColorButton.setStyleSheet(
@@ -140,20 +141,21 @@ class BlenderKritaLink(DockWidget):
         def on_port_change(text):
             new_port = int(text)
             try:
-                print(
-                    f"{ConnectionManager.connection} {new_port} {ConnectionManager.port}"
+                logger.debug(
+                    "on_port_change details: conn=%s, new=%s, current=%s",
+                    ConnectionManager.connection, new_port, ConnectionManager.port
                 )
                 if new_port != ConnectionManager.port:
                     self.connection.disconnect()
-                    print("disconnecting")
+                    logger.info("disconnecting because port changed")
             except Exception as e:
-                print(e, "\n", traceback.print_exc())
+                logger.error("Error in on_port_change: %s\n%s", e, traceback.format_exc())
             finally:
                 ConnectionManager.port = new_port
             if ConnectionManager.port > 65531:
                 ConnectionManager.port = 65431
             Settings.setSetting("port", ConnectionManager.port)
-            print(f"port changed to: + {ConnectionManager.port}")
+            logger.info("port changed to: %s", ConnectionManager.port)
 
         self.central_widget.connection_port.setValue(
             ConnectionManager.port
@@ -203,15 +205,16 @@ class BlenderKritaLink(DockWidget):
         app_notifier.viewCreated.connect(self.attach_uv_viewer)
         app_notifier.viewCreated.connect(self.attach_shortcuts_listeners)
 
-        print(self.central_widget, self.central_widget.ConnectButton)
-        print(
+        logger.debug("central_widget details: %s %s", self.central_widget, self.central_widget.ConnectButton)
+        logger.debug(
+            "UI file path: %s",
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)), "BlenderKritaLinkUI.ui"
             )
         )
 
         def image_search_change(text: str):
-            print("search change", text)
+            logger.debug("search change: %s", text)
             ImageList.instance.update_images_list(ImageList.image_list, text)
 
         self.central_widget.image_search.textChanged.connect(image_search_change)
@@ -259,7 +262,7 @@ class BlenderKritaLink(DockWidget):
         self.refresh_time = 0
 
     def attach_shortcuts_listeners(self):
-        print("onviewcreated, attaching shortcuts listeners...")
+        logger.info("onviewcreated, attaching shortcuts listeners...")
 
         def uv_show_toggle(_):
             toggled_state = not Settings.getSetting("showUVs")
@@ -294,7 +297,7 @@ class BlenderKritaLink(DockWidget):
         win = Krita.instance().activeWindow().qwindow()
         if not self.avc_connected:
             win.activeViewChanged.connect(self.active_view_changed)
-            print("connected krita to blender")
+            logger.info("connected krita to blender active view changed")
         self.avc_connected = True
 
     def on_blender_connected(self):
@@ -304,8 +307,8 @@ class BlenderKritaLink(DockWidget):
     def get_image_data(self):
         if self.connection is None or self.connection.connection is None:
             return
-        print(
-            "get_image_data log:  ",
+        logger.info(
+            "get_image_data log: linked_doc=%s inside_docs=%s",
             self.connection.linked_document,
             self.connection.linked_document in Krita.instance().documents(),
         )
@@ -337,7 +340,7 @@ class BlenderKritaLink(DockWidget):
             if value["document"] == doc
         ]
         dupa_names = [key for (key, _) in dupa_list]
-        print("dupa_names: ", dupa_names)
+        logger.debug("linked image names to send: %s", dupa_names)
 
         for key, value in dupa_list:
             image_obj = value
@@ -385,11 +388,11 @@ class BlenderKritaLink(DockWidget):
         Thread(target=write_mem).start()
 
     def on_listen_change(self, checked):
-        print("draw Listen changed", checked)
+        logger.info("draw Listen changed: %s", checked)
         Settings.setSetting("listenCanvas", checked == 2)
 
     def on_update_image(self, x):
-        print(Settings.getSetting("listenCanvas"))
+        logger.debug("listenCanvas: %s", Settings.getSetting("listenCanvas"))
         if not Settings.getSetting("listenCanvas"):
             return
         if x["paint"]:
@@ -399,10 +402,10 @@ class BlenderKritaLink(DockWidget):
             t.start()
 
     def canvasChanged(self, canvas):
-        print("something Happened")
+        logger.debug("something Happened on canvas")
 
     def active_view_changed(self):
-        print("active view changed")
+        logger.info("active view changed")
         self.get_image_data()
         self.attach_uv_viewer()
 
@@ -426,7 +429,7 @@ class BlenderKritaLink(DockWidget):
 
     def select_uvs(self):
         uvs = asyncio.run(self.connection.request({"type": "SELECT_UVS"}))
-        print(format_message(uvs))
+        logger.debug("select_uvs: %s", format_message(uvs))
 
     def get_uv_overlay(self):
         asyncio.run(self.connection.request({"type": "GET_UV_OVERLAY"}))
@@ -439,7 +442,7 @@ class BlenderKritaLink(DockWidget):
         ]
         faces = message["data"]
         if action is not None:
-            print("action exists")
+            logger.debug("action 'select_shapes' exists, triggering select")
             for g in faces:
                 for f in g:
                     f[0] *= width_height[0]
@@ -465,7 +468,7 @@ class BlenderKritaLink(DockWidget):
             document.refreshProjection()
 
     def handle_uv_overlay(self, message):
-        print("handle_uv_overlay")
+        logger.debug("handle_uv_overlay")
         UvOverlay.set_polygons(message["data"])
         for ov in UvOverlay.INSTANCES_SET:
             if not sip.isdeleted(ov):

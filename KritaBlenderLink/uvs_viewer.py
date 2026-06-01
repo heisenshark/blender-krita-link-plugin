@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .settings import Settings
+from .logger import logger
 from krita import Krita
 from PyQt6 import sip
 from PyQt6.QtCore import (
@@ -59,7 +60,7 @@ def get_transform(view):
     document = view.document()
     q_view = get_q_view(view)
     if q_view is None:
-        print("view is none")
+        logger.warning("get_transform: view is None")
         return QTransform()
 
     zoom = (canvas.zoomLevel())
@@ -81,7 +82,7 @@ class VieportResizeListener(QObject):
 
     def eventFilter(self, obj, e):
         if e.type() == QEvent.Type.Resize:
-            print("resize handle from canvas")
+            logger.debug("VieportResizeListener: resize handle from canvas triggered")
             self.function()
         return super().eventFilter(obj, e)
 
@@ -185,7 +186,7 @@ class UvOverlay(QWidget):
 
 # Konwertuj dane do obrazu QImage
             image = QImage(image_data, document.width(), document.height(), QImage.Format.Format_ARGB32)
-            print(image)
+            logger.debug("exportImage QImage created: %s", image)
 
             painter = QPainter(image)
             painter.translate(document.width()/2,document.height()/2)

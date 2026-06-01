@@ -4,6 +4,7 @@ from BlenderKritaLink.connection import KritaConnection
 from BlenderKritaLink.uv_extractor import get_fast_hash, getUvOverlay
 
 from .image_manager import ImageManager
+from .logger import logger
 
 class UvWatch:
     last_hash = None
@@ -20,13 +21,13 @@ class UvWatch:
         t = time()
         try:
             ImageManager.UPDATING_IMAGE.acquire()
-            print(f"hello, perfcheck{time()-t}", )
+            logger.debug("perfcheck 1: %s", time()-t)
             new_hash = get_fast_hash()
-            print(f"hello, perfcheck{time()-t}")
-            print("hashing func", new_hash, self.last_hash)
+            logger.debug("perfcheck 2: %s", time()-t)
+            logger.debug("hashing func: %s (last: %s)", new_hash, self.last_hash)
             if new_hash != self.last_hash and KritaConnection.CONNECTION != None:
                 dd = getUvOverlay() 
-                print("uv data changed, sending overlay")
+                logger.info("uv data changed, sending overlay")
                 KritaConnection.CONNECTION.send(
                             {
                                 "type": "GET_UV_OVERLAY",
@@ -39,7 +40,7 @@ class UvWatch:
         finally:
             
             ImageManager.UPDATING_IMAGE.release()
-            print(interval)
+            logger.debug("sync interval: %s", interval)
             return interval
 
 class ImagesStateWatch():

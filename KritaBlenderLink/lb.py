@@ -3,6 +3,7 @@ from threading import Timer
 from PyQt6.QtCore import QObject, QEvent
 from multiprocessing import shared_memory
 from contextlib import contextmanager
+from .logger import logger
 
 class Debouncer:
     def __init__(self, fn, time, non_debounced=lambda: None) -> None:
@@ -14,7 +15,7 @@ class Debouncer:
 
     def cal(self):
         time_now = time.time()
-        print("cal called", time_now, time.time())
+        logger.debug("Debouncer.cal called: time_now=%s time=%s", time_now, time.time())
         self.non_debounced()
         if time_now - self.last_time > self.time:
 
@@ -26,7 +27,7 @@ class Debouncer:
                         self.fn()
                     finally:
                         self.finished = True
-                        print("finished", time_now, time.time())
+                        logger.debug("Debouncer execute finished: time_now=%s time=%s", time_now, time.time())
                     
             if self.finished:
                 execute()
@@ -48,7 +49,7 @@ class ColorButtonFilter(QObject):
                 self.function()
             return True
         if event.type() == QEvent.Type.Wheel:
-            print(event.angleDelta())
+            logger.debug("ColorButtonFilter wheel event delta: %s", event.angleDelta())
             if self.wheel_handler:
                 self.wheel_handler(event.angleDelta())
         return super().eventFilter(obj, event)

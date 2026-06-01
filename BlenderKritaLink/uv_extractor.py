@@ -16,6 +16,7 @@ import bpy
 from mathutils import Vector
 import bmesh
 import traceback
+from .logger import logger
 __DEBUG_MODE = False
 
 
@@ -235,13 +236,13 @@ class Graph:
 
 
 def dump_graph(graph):
-    print("=== Node ===")
+    logger.info("=== Node ===")
     for _, node in graph.nodes.items():
-        print("Key: {}, Value {}".format(node.key, node.value))
+        logger.info("Key: %s, Value %s", node.key, node.value)
 
-    print("=== Edge ===")
+    logger.info("=== Edge ===")
     for edge in graph.edges:
-        print("{} - {}".format(edge.node_1.key, edge.node_2.key))
+        logger.info("%s - %s", edge.node_1.key, edge.node_2.key)
 
 
 # VF2 algorithm
@@ -356,7 +357,7 @@ def debug_print(*s):
     """
 
     if is_debug_mode():
-        pprint(s)
+        logger.debug("%s", s)
 
 
 def check_version(major, minor, _):
@@ -1426,10 +1427,10 @@ def __do_weiler_atherton_cliping(clip_uvs, subject_uvs, mode, same_polygon_thres
         if not result:
             return None
         if result != current:
-            print("Internal Error")
+            logger.error("Internal Error")
             return None
         if not exiting:
-            print("Internal Error: No exiting UV")
+            logger.error("Internal Error: No exiting UV")
             return None
 
         # enter
@@ -1451,7 +1452,7 @@ def __do_weiler_atherton_cliping(clip_uvs, subject_uvs, mode, same_polygon_thres
             prev = current
 
         if error:
-            print("Internal Error: Infinite loop")
+            logger.error("Internal Error: Infinite loop")
             return None
 
         # exit
@@ -1795,16 +1796,16 @@ def getUvData():
         and hasattr(selected_object.data.uv_layers, "active")
         and selected_object.data.uv_layers.active
     ):
-        print("does not have UV data.")
+        logger.warning("does not have UV data.")
         return []
 
-    print(mode)
+    logger.debug("mode: %s", mode)
     bm = None
     if mode == "EDIT":
-        print(mode)
+        logger.debug("mode: %s", mode)
         bm = bmesh.from_edit_mesh(selected_object.data)
     else:
-        print(mode)
+        logger.debug("mode: %s", mode)
         bm = bmesh.new()
         bm.from_mesh(selected_object.data)
 
@@ -1851,10 +1852,10 @@ def getUvFromObject(selected_object):
         and hasattr(selected_object.data.uv_layers, "active")
         and selected_object.data.uv_layers.active
     ):
-        print("does not have UV data.")
+        logger.warning("does not have UV data.")
         return []
 
-    print(mode)
+    logger.debug("mode: %s", mode)
     bm = None
     data_copy = selected_object.data.copy()
     bm = bmesh.new()
@@ -1894,9 +1895,9 @@ def get_fast_hash():
             and hasattr(o.data.uv_layers, "active")
             and o.data.uv_layers.active
         ):
-            print("does not have UV data.")
+            logger.warning("does not have UV data.")
             continue
-        print(mode)
+        logger.debug("mode: %s", mode)
         bm = None
         data_copy = o.data.copy()
         bm = bmesh.new()
@@ -1925,11 +1926,10 @@ def get_fast_hash():
             raw_str += str(uv_sum)
 
         except Exception as e:
-            print(e,"\n",traceback.print_exc())
-            print(e)
+            logger.error("Error in get_fast_hash: %s\n%s", e, traceback.format_exc())
         finally:
             bm.free()
             bpy.data.meshes.remove(data_copy)
 
-    print(f"gethash {time() - t}")
+    logger.debug("gethash: %s", time() - t)
     return hash(raw_str)

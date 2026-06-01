@@ -6,6 +6,7 @@ from multiprocessing import shared_memory
 import asyncio
 import traceback
 from .lb import shared_memory_context, check_shared_memory_exists
+from .logger import logger, configure_logger
 
 
 # link_dict = {
@@ -57,6 +58,7 @@ class ConnectionManager:
     def __init__(self) -> None:
         if Settings.getSetting("port") is not None:
             ConnectionManager.port = Settings.getSetting("port") 
+        configure_logger(ConnectionManager.port)
         MessageListener("GET_IMAGES", lambda message: self.set_images(message["data"]))
 
     def set_images(self, images):
@@ -64,43 +66,47 @@ class ConnectionManager:
 
     def change_adress(self, adr):
         self.port = adr
+        configure_logger(adr)
 
     def connect(self, on_connect, on_disconnect):
         self.on_disconnect = on_disconnect
         if self.connection:
             return
         else:
-            print(self.connection)
-        print(f"connecting to {self.port}")
+            logger.debug("connection instance status: %s", self.connection)
+        logger.info("connecting to port: %s", self.port)
+        configure_logger(self.port)
         def thread():
-            with Client(("localhost", self.port), authkey=b"2137") as connection:
-                print("client created")
-                self.connection = connection
-                on_connect()
-                while True:
-                    try:
-                        message_available = self.connection.poll(0.5)
-                        if not message_available:
-                            continue
-                        if self.connection is None or self.connection.closed:
+            try:
+                with Client(("localhost", self.port), authkey=b"2137") as connection:
+                    logger.info("connection client created")
+                    self.connection = connection
+                    on_connect()
+                    while True:
+                        try:
+                            message_available = self.connection.poll(0.5)
+                            if not message_available:
+                                continue
+                            if self.connection is None or self.connection.closed:
+                                break
+                            message = self.connection.recv()
+                            if message == "close":
+                                logger.info("closing connection message received")
+                                break
+                            if "imageData" not in message:
+                                logger.debug("received message: %s", format_message(message))
+                            self.emit_message(message)
+                        except Exception as e:
+                            logger.error("Error on receiving messages: %s\n%s", e, traceback.format_exc())
+                            self.connection = None
+                            for img_name,img in self.linked_images.items():
+                                if img["memoryObject"] and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)+"_"+str(img_name)):
+                                    img["memoryObject"].unlink()
+                                    img["memoryObject"]= None
                             break
-                        message = self.connection.recv()
-                        if message == "close":
-                            print("closing connection...")
-                            break
-                        if "imageData" not in message:
-                            print("recived message", format_message(message))
-                        self.emit_message(message)
-                    except Exception as e:
-                        print(traceback.format_exc())
-                        print("Error on reciving messages", e)
-                        self.connection = None
-                        for img_name,img in self.linked_images.items():
-                            if img["memoryObject"] and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)+"_"+str(img_name)):
-                                img["memoryObject"].unlink()
-                                img["memoryObject"]= None
-                        break
-                on_disconnect()
+            except Exception as conn_err:
+                logger.error("Failed to establish connection to Blender on port %s: %s", self.port, conn_err)
+            on_disconnect()
 
         t1 = Thread(target=thread)
         t1.start()
@@ -118,26 +124,26 @@ class ConnectionManager:
             if self.on_disconnect:
                 self.on_disconnect()
         else:
-            print("there is no connection")
+            logger.warning("there is no connection to disconnect")
 
     def emit_message(self, message):
         """emits a message to all listeners inside this object"""
         if isinstance(message, object) and "type" in message and "data" in message:
-            print(ConnectionManager.listeners, format_message(message))
+            logger.debug("emitting message: listeners=%s msg=%s", ConnectionManager.listeners, format_message(message))
             event_type = message["type"]
             for listener in ConnectionManager.listeners:
                 if listener.event_type == event_type:
                     listener.recieve_message(message=message)
 
     def resize_memory(self, canvas_bytes_len:int,image_name:str):
-        print("unlink")
+        logger.debug("unlink memory for %s", image_name)
         linked_image = self.linked_images[image_name]
         try:
             if linked_image["memoryObject"]:
                 linked_image["memoryObject"].unlink()
 
         except Exception as e:
-            print(e)
+            logger.debug("memory unlink exception: %s", e)
         name ="krita-blender"+str(ConnectionManager.port)+"_"+str(image_name)
 
         if linked_image["memoryObject"] and check_shared_memory_exists(name):
@@ -148,10 +154,9 @@ class ConnectionManager:
             linked_image["memoryObject"] = shared_memory.SharedMemory(
                 name=name, create=True, size=canvas_bytes_len
             )
-            print("memory  created")
+            logger.info("shared memory created: %s", name)
         except Exception as e:
-            print("file exists, trying another way")
-            print(e,"\n",traceback.print_exc())
+            logger.debug("shared memory creation failed (file might exist), attempting attach: %s", e)
             linked_image["memoryObject"] = shared_memory.SharedMemory(
                 name=name, create=False, size=canvas_bytes_len
             )
@@ -160,12 +165,12 @@ class ConnectionManager:
         if self.connection:
             self.connection.send(message)
         else:
-            print("there is no connection")
+            logger.warning("no connection available to send message")
 
     def write_memory(self, bts,shm):
-        print(shm, len(bts))
+        logger.debug("write_memory: shm=%s, size=%s", shm, len(bts))
         if shm is None:
-            print("no memory to write")
+            logger.warning("no memory object to write into")
             return
         shm.buf[: len(bts)] = bts
 
@@ -190,12 +195,12 @@ class ConnectionManager:
 
             async def task():
                 def on_nop(msg):
-                    print("future cancelled")
+                    logger.debug("future cancelled: request nop response received")
                     if msg["requestId"] == self.requestId:
                         future.cancel()
 
                 def on_success(msg):
-                    print("future success")
+                    logger.debug("future success: request response received")
                     event_loop.call_soon_threadsafe(future.set_result, msg)
 
                 failure_listener = MessageListener("nop", on_nop)
@@ -204,11 +209,11 @@ class ConnectionManager:
                     lambda fut: (failure_listener.destroy(), success_listener.destroy())
                 )
                 self.send_message(payload)
-                print("future before")
+                logger.debug("request message sent: waiting for response")
 
             await asyncio.create_task(task())
             res = await asyncio.wait_for(future, 3.0)
-            print("future done")
+            logger.debug("request/response complete")
             return res
         return None
 
@@ -223,15 +228,15 @@ def link_image(image, conn_manager: ConnectionManager):
         "document":doc,
         "memoryObject":None
     }
-    print(
+    logger.info(
+        "linking image size=%s memsize=%s depth=%s colorDepth=%s image=%s",
         size,
-        "memsize",
         size[0] * size[1] * depth,
         depth,
         doc.colorDepth()[1:],
         image,
     )
-    print("resizing")
+    logger.info("resizing memory for linked image")
     conn_manager.resize_memory(size[0] * size[1] * depth,image["name"])
 
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
@@ -241,7 +246,7 @@ def link_layer(image, conn_manager: ConnectionManager):
     doc = Krita.instance().activeDocument()
     depth = int(doc.colorDepth()[1:]) // 2
     size = [doc.width(), doc.height()]
-    print(doc.activeNode())
+    logger.info("linking active layer: %s", doc.activeNode().name() if doc.activeNode() else "None")
 
     conn_manager.linked_images[image["name"]] = {
         "type":"layer",
@@ -282,7 +287,8 @@ def blender_image_as_new_layer(image_object, conn_manager):
             image = i
     if not image:
         return
-    print(
+    logger.info(
+        "creating new layer from blender: size=%sx%s pixel_size=%s total_bytes=%s",
         image_object["size"][0],
         image_object["size"][1],
         pixel_size,
@@ -330,7 +336,7 @@ def open_as_new_document(image, conn_manager: ConnectionManager, link:bool = Fal
 def change_memory(conn_manager: ConnectionManager):
     """function to resize memory if image data is changed"""
     for image_name,link_object in conn_manager.linked_images.items():
-        print("change memory", conn_manager.linked_document)
+        logger.debug("change memory check")
         doc = link_object["document"]
         size = [doc.width(), doc.height()]
         depth = int(doc.colorDepth()[1:]) // 2
@@ -342,16 +348,13 @@ def change_memory(conn_manager: ConnectionManager):
 
         if image_name not in conn_manager.linked_images.keys():
             return
-        print(conn_manager.linked_document)
 
-        print(
+        logger.info(
+            "resizing active linked image dimensions changed: size=%s depth=%s colorDepth=%s",
             size,
-            "memsize",
-            size[0] * size[1] * depth,
             depth,
             doc.colorDepth()[1:],
         )
-        print("resizing")
         conn_manager.resize_memory(size[0] * size[1] * depth,image_name)
     asyncio.run(conn_manager.request({"data": "", "type": "GET_IMAGES"}))
 

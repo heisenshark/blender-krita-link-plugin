@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 )
 from krita import Krita
 from KritaBlenderLink.connection import ConnectionManager, blender_image_as_new_layer, open_as_new_document, link_image, link_layer
+from ..logger import logger
 
 class ImageItem(QWidget):
     def __init__(self, image,conn_manager: ConnectionManager, parent=None):
@@ -98,25 +99,25 @@ class ImageItem(QWidget):
             linkImageAct.setDisabled(True)
         
         action = cmenu.exec(self.mapToGlobal(event.pos()))
-        print(action)
+        logger.debug("ImageItem context menu action selected: %s", action.text() if action else "None")
         if action == linkImageAct:
-            print("link selected")
+            logger.info("link selected")
             link_image(self.image,self.conn_manager) 
         elif action == linkLayer:
-            print("linking layer")
+            logger.info("linking layer")
             link_layer(self.image,self.conn_manager)
         elif action == unlinkImageAct:
-            print("unlinking image")
+            logger.info("unlinking image")
             self.conn_manager.remove_link(self.image["name"])
         elif action == openAct:
-            print("from blender to krita selected")
+            logger.info("from blender to krita selected")
             blender_image_as_new_layer(self.image,self.conn_manager)
         elif action == openAsNewDocumentAct:
             open_as_new_document(self.image,self.conn_manager)
-            print("dupa") 
+            logger.info("Open as new document triggered") 
         elif action == openAsNewDocumentLinkAct:
             open_as_new_document(self.image,self.conn_manager,True)
-            print("dupa") 
+            logger.info("Open as new document and link triggered")
 
     def mouseDoubleClickEvent(self, a0 )-> None: 
         if (

@@ -1,9 +1,11 @@
 import bpy
+import traceback
 
 from BlenderKritaLink.watch import UvWatch,ImagesStateWatch
 from .connection import KritaConnection
 from .image_manager import ImageManager
 from .ui import _PT_BlenderKritaLinkPanel
+from .logger import logger, configure_logger
 
 bl_info = {
     "name": "Blender Krita link",
@@ -24,7 +26,8 @@ def label_update(self, context):
 
 def port_update(self, context):
     new_port = int(context.scene.global_store.connection_port)
-    print("updating port ", KritaConnection.PORT, new_port, KritaConnection.LINK_INSTANCE.listener,KritaConnection.CONNECTION)
+    configure_logger(new_port)
+    logger.info("updating port %s %s %s %s", KritaConnection.PORT, new_port, KritaConnection.LINK_INSTANCE.listener, KritaConnection.CONNECTION)
     if new_port == KritaConnection.PORT:
         return 
     if KritaConnection.CONNECTION is not None:
@@ -38,11 +41,10 @@ def port_update(self, context):
 def update_panel_watch():
     try:
         if bpy.context.scene.global_store.label != KritaConnection.STATUS:
-            print("updating panel watch", bpy.context.scene.global_store.label, KritaConnection.STATUS )
+            logger.info("updating panel watch %s %s", bpy.context.scene.global_store.label, KritaConnection.STATUS)
             bpy.context.scene.global_store.label = KritaConnection.STATUS
     except Exception as e:
-        print(e,"\n",traceback.print_exc())
-        print(e)
+        logger.error("Error in update_panel_watch: %s\n%s", e, traceback.format_exc())
     return 0.5
 
 
@@ -86,8 +88,10 @@ class DisconnectOperator(bpy.types.Operator):
         return {"FINISHED"}
 
 def init_connection():
-    print("init connection",bpy.context.scene.global_store.connection_port)
-    KritaConnection.PORT = bpy.context.scene.global_store.connection_port
+    new_port = int(bpy.context.scene.global_store.connection_port)
+    configure_logger(new_port)
+    logger.info("init connection %s", new_port)
+    KritaConnection.PORT = new_port
     connection_instance = KritaConnection()
     connection_instance.start()
 
