@@ -1,6 +1,6 @@
 import time
 from threading import Timer
-from PyQt6.QtCore import QObject, QEvent
+from .qt_compat import QObject, EvMouseButtonPress, EvWheel
 from multiprocessing import shared_memory
 from contextlib import contextmanager
 from .logger import logger
@@ -42,13 +42,12 @@ class ColorButtonFilter(QObject):
         super().__init__()
         self.function = function
         self.wheel_handler = wheel_handler 
-
     def eventFilter(self, obj, event):
-        if event.type() == QEvent.Type.MouseButtonPress:
+        if event.type() == EvMouseButtonPress:
             if self.function:
                 self.function()
             return True
-        if event.type() == QEvent.Type.Wheel:
+        if event.type() == EvWheel:
             logger.debug("ColorButtonFilter wheel event delta: %s", event.angleDelta())
             if self.wheel_handler:
                 self.wheel_handler(event.angleDelta())

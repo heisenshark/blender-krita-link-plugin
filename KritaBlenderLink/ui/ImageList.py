@@ -1,5 +1,12 @@
-from PyQt6.QtWidgets import QListWidget, QWidget, QSizePolicy, QListWidgetItem
-from PyQt6.QtCore import pyqtSignal, QSize
+from ..qt_compat import (
+    QListWidget,
+    QWidget,
+    QSizePolicy,
+    QListWidgetItem,
+    pyqtSignal,
+    QSize,
+    SizePreferred,
+)
 from .ImageItem import ImageItem
 from KritaBlenderLink.connection import (
     ConnectionManager,
@@ -25,7 +32,7 @@ class ImageList(QListWidget):
         logger.info("ImageList initialized successfully")
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy = QSizePolicy(SizePreferred, SizePreferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(

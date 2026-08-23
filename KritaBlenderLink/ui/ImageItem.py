@@ -1,11 +1,16 @@
 from time import sleep
-from PyQt6.QtWidgets import (
+from ..qt_compat import (
     QWidget,
     QSizePolicy,
     QHBoxLayout,
     QSpacerItem,
     QLabel,
     QMenu,
+    SizePreferred,
+    SizeExpanding,
+    SizeMinimum,
+    SizeMinimumExpanding,
+    SizeFixed,
 )
 from krita import Krita
 from KritaBlenderLink.connection import ConnectionManager, blender_image_as_new_layer, open_as_new_document, link_image, link_layer
@@ -29,7 +34,7 @@ class ImageItem(QWidget):
             width = document.width()
 
         self.setObjectName("ListItem")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        sizePolicy1 = QSizePolicy(SizePreferred, SizePreferred)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
@@ -54,14 +59,14 @@ class ImageItem(QWidget):
         self.label_size.setObjectName("label_size")
 
         self.horizontalSpacer_2 = QSpacerItem(
-            40, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+            40, 10, SizeExpanding, SizeMinimum
         )
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
 
         self.horizontalLayout_2.addWidget(self.label_size)
 
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
+        sizePolicy2 = QSizePolicy(SizeMinimumExpanding, SizeFixed)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
         self.setLayout(self.horizontalLayout_2)

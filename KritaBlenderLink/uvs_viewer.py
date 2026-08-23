@@ -4,23 +4,31 @@ from __future__ import annotations
 from .settings import Settings
 from .logger import logger
 from krita import Krita
-from PyQt6 import sip
-from PyQt6.QtCore import (
+from .qt_compat import (
+    sip,
     QEvent,
     QObject,
     QPointF,
-    Qt
-)
-from PyQt6.QtGui import QColor, QPainter, QPen, QPolygonF, QTransform, QImage
-from PyQt6.QtWidgets import (
+    Qt,
+    QColor,
+    QPainter,
+    QPen,
+    QPolygonF,
+    QTransform,
+    QImage,
     QAbstractScrollArea,
     QMdiArea,
     QMdiSubWindow,
     QWidget,
+    QOpenGLWidget,
+    EvResize,
+    WA_TransparentForMouseEvents,
+    NoFocus,
+    Antialiasing,
+    NoPen,
+    SolidLine,
+    Format_ARGB32,
 )
-
-from PyQt6.QtOpenGLWidgets import (
-    QOpenGLWidget)
 
 def ruler_correction():
     qwin = Krita.instance().activeWindow().qwindow()
@@ -81,7 +89,7 @@ class VieportResizeListener(QObject):
         self.function = function
 
     def eventFilter(self, obj, e):
-        if e.type() == QEvent.Type.Resize:
+        if e.type() == EvResize:
             logger.debug("VieportResizeListener: resize handle from canvas triggered")
             self.function()
         return super().eventFilter(obj, e)
@@ -105,8 +113,8 @@ class UvOverlay(QWidget):
         UvOverlay.INSTANCES_SET.append(self)
         self.setObjectName("UVOVERLAY")
 
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setAttribute(WA_TransparentForMouseEvents)
+        self.setFocusPolicy(NoFocus)
         q_canvas = parent.findChild(QAbstractScrollArea).viewport()
 
         self.ls = VieportResizeListener(self.resize_handle)
@@ -162,15 +170,15 @@ class UvOverlay(QWidget):
         if not show_uv:
             return
         try:
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setRenderHint(Antialiasing, True)
             painter.translate(self.rect().topLeft())
             painter.setTransform(get_transform(self.view), combine=True)
-            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setPen(NoPen)
 
             document = view.document()
             zoom = (canvas.zoomLevel())
             pen_weight = Settings.getSetting("uv_width") if Settings.getSetting("uv_width") is not None else 1
-            painter.setPen(QPen(UvOverlay.COLOR, 0.5 * pen_weight / zoom, Qt.PenStyle.SolidLine))
+            painter.setPen(QPen(UvOverlay.COLOR, 0.5 * pen_weight / zoom, SolidLine))
             for p in self._polygons:
                 painter.drawPolygon(p)
 
@@ -185,14 +193,14 @@ class UvOverlay(QWidget):
             image_data = layer.projectionPixelData(0, 0, document.width(), document.height())
 
 # Konwertuj dane do obrazu QImage
-            image = QImage(image_data, document.width(), document.height(), QImage.Format.Format_ARGB32)
+            image = QImage(image_data, document.width(), document.height(), Format_ARGB32)
             logger.debug("exportImage QImage created: %s", image)
 
             painter = QPainter(image)
             painter.translate(document.width()/2,document.height()/2)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setRenderHint(Antialiasing, True)
             pen_weight = Settings.getSetting("uv_width") if Settings.getSetting("uv_width") is not None else 1
-            painter.setPen(QPen(UvOverlay.COLOR, pen_weight, Qt.PenStyle.SolidLine))
+            painter.setPen(QPen(UvOverlay.COLOR, pen_weight, SolidLine))
 
             for p in UvOverlay.INSTANCES_SET[0]._polygons:
                 painter.drawPolygon(p)            
@@ -203,7 +211,7 @@ class UvOverlay(QWidget):
             return None
 
     def eventFilter(self, obj, e):
-        if e.type() == QEvent.Type.Resize:
+        if e.type() == EvResize:
             self.resize_handle()
         return super().eventFilter(obj, e)
 

@@ -1,5 +1,5 @@
 from krita import Krita, Notifier, QtWidgets
-from PyQt6.QtCore import pyqtSignal, QObject, Qt
+from .qt_compat import pyqtSignal, QObject, LeftButton
 from .logger import logger
 
 
@@ -95,7 +95,7 @@ class ImageState(QObject):
         if obj.metaObject().className() == "KisOpenGLCanvas2" or obj.metaObject().className() == "KisQPainterCanvas":
             if (event.type() == 3):
                 logger.debug("ImageState event filter type=3 button=%s", event.button())
-            if event.type() == 93 or (event.type() == 3 and event.button() == Qt.MouseButton.LeftButton) or event.type()== 196:
+            if event.type() == 93 or (event.type() == 3 and event.button() == LeftButton) or event.type()== 196:
                 logger.debug("ImageState event filter: obj=%s base=%s", obj, type(obj).__bases__)
                 self.data["paint"] = True
                 self.onPixelsChange.emit(self.data)

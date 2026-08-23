@@ -4,10 +4,19 @@ from threading import Timer, Thread
 import os as os
 import asyncio
 from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
-from PyQt6 import uic, sip
-from PyQt6.QtWidgets import QColorDialog
-from PyQt6.QtCore import QByteArray, QTimer, Qt
-from PyQt6.QtGui import QColor
+from .qt_compat import (
+    uic,
+    sip,
+    QColorDialog,
+    QByteArray,
+    QTimer,
+    Qt,
+    QColor,
+    Checked,
+    Unchecked,
+    ShowAlphaChannel,
+    HexArgb,
+)
 import time
 import traceback
 
@@ -77,7 +86,7 @@ class BlenderKritaLink(DockWidget):
         self.setWidget(self.central_widget)
 
         self.central_widget.SendOnDrawCheckbox.setCheckState(
-            Qt.CheckState.Checked if Settings.getSetting("listenCanvas") else Qt.CheckState.Unchecked
+            Checked if Settings.getSetting("listenCanvas") else Unchecked
         )
         self.central_widget.SendOnDrawCheckbox.stateChanged.connect(
             self.on_listen_change
@@ -91,7 +100,7 @@ class BlenderKritaLink(DockWidget):
                     uo.update()
 
         self.central_widget.ShowUVCheckbox.setCheckState(
-            Qt.CheckState.Checked if Settings.getSetting("showUVs") else Qt.CheckState.Unchecked
+            Checked if Settings.getSetting("showUVs") else Unchecked
         )
         self.central_widget.ShowUVCheckbox.stateChanged.connect(on_uv_show)
 
@@ -102,13 +111,13 @@ class BlenderKritaLink(DockWidget):
                     if Settings.getSetting("uvColor") is not None
                     else "#000000"
                 ),
-                options=QColorDialog.ColorDialogOption.ShowAlphaChannel,
+                options=ShowAlphaChannel,
             )
             UvOverlay.COLOR = color
             self.central_widget.UVColorButton.setStyleSheet(
-                f"background-color: {color.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
+                f"background-color: {color.name(HexArgb)};border: 2px solid #000000;"
             )
-            Settings.setSetting("uvColor", color.name(QColor.NameFormat.HexArgb))
+            Settings.setSetting("uvColor", color.name(HexArgb))
 
         def wheel_handler(delta):
             color = Settings.getSetting("uvColor")
@@ -123,9 +132,9 @@ class BlenderKritaLink(DockWidget):
             c.setHsv(color[0], color[1], color[2], color[3])
             logger.debug("uvColor wheel handler Hsv: %s", color)
             UvOverlay.COLOR = c
-            color = Settings.setSetting("uvColor", c.name(QColor.NameFormat.HexArgb))
+            color = Settings.setSetting("uvColor", c.name(HexArgb))
             self.central_widget.UVColorButton.setStyleSheet(
-                f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
+                f"background-color: {c.name(HexArgb)};border: 2px solid #000000;"
             )
 
         self.filter = ColorButtonFilter(open_color_dialog, wheel_handler=wheel_handler)
@@ -135,7 +144,7 @@ class BlenderKritaLink(DockWidget):
             else "#000000"
         )
         self.central_widget.UVColorButton.setStyleSheet(
-            f"background-color: {c.name(QColor.NameFormat.HexArgb)};border: 2px solid #000000;"
+            f"background-color: {c.name(HexArgb)};border: 2px solid #000000;"
         )
 
         def on_port_change(text):
@@ -267,7 +276,7 @@ class BlenderKritaLink(DockWidget):
         def uv_show_toggle(_):
             toggled_state = not Settings.getSetting("showUVs")
             Settings.setSetting("showUVs", toggled_state)
-            self.central_widget.ShowUVCheckbox.setCheckState(Qt.CheckState.Checked if toggled_state else Qt.CheckState.Unchecked)
+            self.central_widget.ShowUVCheckbox.setCheckState(Checked if toggled_state else Unchecked)
             for uo in UvOverlay.INSTANCES_SET:
                 if not sip.isdeleted(uo):
                     uo.update()
@@ -410,9 +419,11 @@ class BlenderKritaLink(DockWidget):
         self.attach_uv_viewer()
 
     def attach_uv_viewer(self):
-        active_window = Application.activeWindow()  # noqa: F821
+        active_window = Krita.instance().activeWindow()
+        if active_window is None:
+            return
         active_view = active_window.activeView()
-        if active_view.window() is None:
+        if active_view is None or active_view.window() is None:
             return
         qv = get_q_view(active_view)
         if qv is None:
@@ -423,7 +434,7 @@ class BlenderKritaLink(DockWidget):
             return
 
         if active_view.document() is None:
-            raise RuntimeError("Document of active view is None!")
+            return
         my_overlay = UvOverlay(active_view)
         my_overlay.show()
 
@@ -460,9 +471,11 @@ class BlenderKritaLink(DockWidget):
             image = UvOverlay.exportImage(new_layer)
 
             ptr = image.bits()
-            ptr.setsize(image.sizeInBytes())
+            size = image.sizeInBytes() if hasattr(image, "sizeInBytes") else image.byteCount()
+            ptr.setsize(size)
+            raw_bytes = ptr.asstring() if hasattr(ptr, "asstring") else bytes(ptr)
             new_layer.setPixelData(
-                QByteArray(ptr.asstring()), 0, 0, document.width(), document.height()
+                QByteArray(raw_bytes), 0, 0, document.width(), document.height()
             )
 
             document.refreshProjection()
