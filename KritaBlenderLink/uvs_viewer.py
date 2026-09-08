@@ -62,7 +62,7 @@ def get_transform(view):
         print("view is none")
         return QTransform()
 
-    zoom = (canvas.zoomLevel() * 72.0) / document.resolution()
+    zoom = canvas.zoomLevel()
     transform = QTransform()
 
     transform.translate(view.flakeToCanvasTransform().dx(),view.flakeToCanvasTransform().dy())
