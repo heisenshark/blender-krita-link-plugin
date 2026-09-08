@@ -21,7 +21,7 @@ on:
 jobs:
   build-linux:
     name: Build Linux .so
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repository
@@ -31,11 +31,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential cmake ninja-build patchelf zip \
-            qt6-base-dev qt6-svg-dev libqt6core5compat6-dev \
-            libkf6config-dev libkf6widgetsaddons-dev libkf6completion-dev \
-            libkf6coreaddons-dev libkf6guiaddons-dev libkf6i18n-dev \
-            libkf6itemviews-dev libkf6kio-dev libboost-dev || true
+            build-essential cmake ninja-build patchelf zip extra-cmake-modules \
+            qtbase5-dev libqt5svg5-dev \
+            libkf5config-dev libkf5widgetsaddons-dev libkf5completion-dev \
+            libkf5coreaddons-dev libkf5guiaddons-dev libkf5i18n-dev \
+            libkf5itemviews-dev libkf5kio-dev libboost-dev
 
       - name: Shallow clone Krita source tree (${{ github.event.inputs.krita_branch || 'krita/6.0' }})
         run: |
@@ -94,6 +94,18 @@ jobs:
       - name: Install Ninja
         run: choco install ninja
 
+      - name: Install Qt 5
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '5.15.2'
+          arch: 'win64_msvc2019_64'
+
+      - name: Install Extra CMake Modules (ECM)
+        run: |
+          git clone --depth 1 --branch v5.91.0 https://invent.kde.org/frameworks/extra-cmake-modules.git "$env:USERPROFILE\ecm"
+          cmake -B "$env:USERPROFILE\ecm-build" -S "$env:USERPROFILE\ecm" -DCMAKE_INSTALL_PREFIX="C:\ECM"
+          cmake --install "$env:USERPROFILE\ecm-build"
+
       - name: Shallow clone Krita source tree (${{ github.event.inputs.krita_branch || 'krita/6.0' }})
         run: |
           $branch = "${{ github.event.inputs.krita_branch }}"
@@ -110,6 +122,7 @@ jobs:
         run: |
           cmake -B "$env:USERPROFILE\krita-build" -S "$env:USERPROFILE\krita-src" -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_PREFIX_PATH="C:\ECM" `
             -DBUILD_TESTING=OFF
 
       - name: Build kritashapesselection target
