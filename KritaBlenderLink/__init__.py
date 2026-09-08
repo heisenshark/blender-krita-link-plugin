@@ -10,7 +10,7 @@ extension = BlenderKritaLinkExtension(parent = instance)
 instance.addExtension(extension)
 
 dock_widget_factory = DockWidgetFactory(
-    DOCKER_ID, DockWidgetFactoryBase.DockRight, BlenderKritaLink
+    DOCKER_ID, DockWidgetFactoryBase.DockPosition.DockRight, BlenderKritaLink
 )
 
 instance.addDockWidgetFactory(dock_widget_factory)

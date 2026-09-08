@@ -8,6 +8,7 @@ from .image_manager import ImageManager
 from .uv_extractor import getUvOverlay
 from pprint import pprint
 from contextlib import contextmanager
+from .logger import logger, configure_logger
 
 
 @contextmanager
@@ -40,13 +41,13 @@ class KritaConnection:
             KritaConnection.LINK_INSTANCE = self
 
     def cleanup(self):
-        print("cleanup")
+        logger.info("cleanup")
         if KritaConnection.CONNECTION is not None:
-            print("sending close")
+            logger.info("sending close")
             self.__STOP_SIGNAL.set()
 
         elif self.listener is not None:
-            print("accepting")
+            logger.info("accepting")
             with Client(
                 ("localhost", KritaConnection.PORT), authkey=b"2137"
             ) as connection:
@@ -55,7 +56,7 @@ class KritaConnection:
 
     def timeout_listener(self):
         if self.listener is not None:
-            print("accepting")
+            logger.info("accepting")
             with Client(
                  self.listener.address, authkey=b"2137"
             ) as connection:
@@ -70,7 +71,7 @@ class KritaConnection:
         KritaConnection.STATUS = "listening"
 
     def update_message(self, message: str):
-        print("UPDATING MESSAGE: ", message)
+        logger.info("UPDATING MESSAGE: %s", message)
         KritaConnection.STATUS = message
 
     @staticmethod
@@ -78,14 +79,14 @@ class KritaConnection:
         if KritaConnection.CONNECTION is not None:
             KritaConnection.CONNECTION.send(message)
         else:
-            print("no connection available")
+            logger.warning("no connection available")
 
     def export_image(self,msg):
-        pprint(msg["data"])
+        logger.debug("exporting image msg data: %s", msg["data"])
         d = ImageManager.INSTANCE.get_image_from_name(
             msg["data"]["image"]["name"]
         )
-        print("hello, successfully got things")
+        logger.info("hello, successfully got things")
         if d is None:
             return
 
@@ -100,14 +101,15 @@ class KritaConnection:
         elif msg["data"]["depth"] == "U8":
             bdepth = 1
 
-        print("depth: ", bdepth, "len", lenght)
+        logger.info("depth: %s len %s", bdepth, lenght)
         np_arr = np.zeros(lenght, dtype=np.float32)
         d.pixels.foreach_get(np_arr)
         if msg["data"]["depth"][0] == "U":
             np_arr = np.rint(
                 np.multiply(np_arr, pow(255, bdepth))
             )
-        print(
+        logger.info(
+            "%s %s %s %s %s",
             lenght,
             bdepth,
             lenght * bdepth,
@@ -121,7 +123,7 @@ class KritaConnection:
             create=False,
         ) as new_shm:
             arr = None
-            print("mem created")
+            logger.info("mem created")
             t = None
             match msg["data"]["depth"]:
                 case "F32":
@@ -172,7 +174,7 @@ class KritaConnection:
                         destroy=False,
                         create=False,
                     ) as existing_shm:
-                        print("refresh initiated", len(existing_shm.buf))
+                        logger.info("refresh initiated %s", len(existing_shm.buf))
                         self.update_message("got The Image")
                         pixels_array = None
                         match msg["depth"]:
@@ -193,7 +195,7 @@ class KritaConnection:
                                     existing_shm.buf, dtype=np.uint16, count=size[0]*size[1]*4
                                 )
                         
-                        print("refresh initiated")
+                        logger.info("refresh initiated")
                         try:
                             ImageManager.UPDATING_IMAGE.acquire()
                             ImageManager.INSTANCE.update_image(pixels_array,image)
@@ -201,7 +203,7 @@ class KritaConnection:
                         finally:
                             pixels_array = None
                             ImageManager.UPDATING_IMAGE.release()
-                        print("refresh complete")
+                        logger.info("refresh complete")
                         self.update_message("connected")
                     conn.send(
                         {
@@ -225,7 +227,7 @@ class KritaConnection:
                         }
                     )
 
-                print(msg)
+                logger.debug("GET_IMAGES msg: %s", msg)
                 conn.send(
                     {
                         "type": "GET_IMAGES",
@@ -233,7 +235,7 @@ class KritaConnection:
                         "requestId": msg["requestId"],
                     }
                 )
-                print("message sent")
+                logger.info("message sent")
 
             case "REMOVE_LINK":
                 ImageManager.INSTANCE.set_image_name(None)
@@ -246,9 +248,9 @@ class KritaConnection:
                 )
 
             case "SELECT_UVS":
-                print("sending UV data: ")
+                logger.info("sending UV data: ")
                 # print(bpy.context.scene,bpy.context.view_layer,bpy.context.view_layer.objects.active)
-                print("sending UV data2 ")
+                logger.info("sending UV data2 ")
                 data = getUvOverlay()
                 conn.send(
                     {
@@ -260,7 +262,7 @@ class KritaConnection:
                 )
 
             case "GET_UV_OVERLAY":
-                print("getting uv overlay")
+                logger.info("getting uv overlay")
                 data = getUvOverlay()
                 conn.send(
                     {
@@ -272,7 +274,7 @@ class KritaConnection:
                 )
 
             case "IMAGE_TO_LAYER":
-                print("OMG krita requests blender image")
+                logger.info("OMG krita requests blender image")
                 self.export_image(msg)
                 conn.send(
                     {
@@ -294,6 +296,7 @@ class KritaConnection:
 
 
     def krita_listener(self):
+        configure_logger(KritaConnection.PORT)
         self.update_message("listening")
         while not self.__STOP_SIGNAL.isSet():
             KritaConnection.LINK_INSTANCE = self
@@ -304,7 +307,7 @@ class KritaConnection:
             conn = listener.accept()
             self.update_message("connected")
             KritaConnection.CONNECTION = conn
-            print("connection accepted")
+            logger.info("connection accepted")
             ImageManager.INSTANCE.set_image_name(None)
             try:
                 self.update_message("connected")
@@ -315,9 +318,9 @@ class KritaConnection:
                     msg = conn.recv()
                     if conn.closed:
                         break
-                    print(msg)
+                    logger.debug("received msg: %s", msg)
                     if msg == "close":
-                        print(msg)
+                        logger.info("closed msg received: %s", msg)
                         conn.close()
                         ImageManager.INSTANCE.set_image_name(None)
                         self.update_message("closed")
@@ -326,8 +329,7 @@ class KritaConnection:
                         self.handle_message(msg)
 
             except Exception as e:
-                print(traceback.format_exc())
-                pprint(e)
+                logger.error("Error in listener loop: %s", traceback.format_exc())
                 if KritaConnection.CONNECTION is not None:
                     KritaConnection.CONNECTION.close()
 

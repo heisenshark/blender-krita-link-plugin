@@ -1,8 +1,9 @@
 import time
 from threading import Timer
-from PyQt5.QtCore import QObject, QEvent
+from .qt_compat import QObject, EvMouseButtonPress, EvWheel
 from multiprocessing import shared_memory
 from contextlib import contextmanager
+from .logger import logger
 
 class Debouncer:
     def __init__(self, fn, time, non_debounced=lambda: None) -> None:
@@ -14,7 +15,7 @@ class Debouncer:
 
     def cal(self):
         time_now = time.time()
-        print("cal called", time_now, time.time())
+        logger.debug("Debouncer.cal called: time_now=%s time=%s", time_now, time.time())
         self.non_debounced()
         if time_now - self.last_time > self.time:
 
@@ -26,7 +27,7 @@ class Debouncer:
                         self.fn()
                     finally:
                         self.finished = True
-                        print("finished", time_now, time.time())
+                        logger.debug("Debouncer execute finished: time_now=%s time=%s", time_now, time.time())
                     
             if self.finished:
                 execute()
@@ -41,14 +42,13 @@ class ColorButtonFilter(QObject):
         super().__init__()
         self.function = function
         self.wheel_handler = wheel_handler 
-
     def eventFilter(self, obj, event):
-        if event.type() == QEvent.MouseButtonPress:
+        if event.type() == EvMouseButtonPress:
             if self.function:
                 self.function()
             return True
-        if event.type() == QEvent.Wheel:
-            print(event.angleDelta())
+        if event.type() == EvWheel:
+            logger.debug("ColorButtonFilter wheel event delta: %s", event.angleDelta())
             if self.wheel_handler:
                 self.wheel_handler(event.angleDelta())
         return super().eventFilter(obj, event)

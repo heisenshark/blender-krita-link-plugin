@@ -1,5 +1,6 @@
 from krita import Krita, Notifier, QtWidgets
-from PyQt5.QtCore import pyqtSignal, QObject
+from .qt_compat import pyqtSignal, QObject, LeftButton
+from .logger import logger
 
 
 class ImageState(QObject):
@@ -16,7 +17,7 @@ class ImageState(QObject):
     instance = None
 
     def __init__(self) -> None:
-        print("init state....")
+        logger.info("init ImageState....")
         super().__init__()
         ImageState.instance = self
         appNotifier: Notifier = Krita.instance().notifier()
@@ -24,8 +25,8 @@ class ImageState(QObject):
         appNotifier.windowCreated.connect(self.setup_listening)
         appNotifier.viewCreated.connect(lambda x: self.check_color_profile())
         appNotifier.imageCreated.connect(lambda x: self.set_data(self.get_data()))
-        self.onPixelsChange.connect(lambda x: print("pixels changed"))
-        self.onImageDataChange.connect(lambda x: print("imagedata changed"))
+        self.onPixelsChange.connect(lambda x: logger.debug("pixels changed"))
+        self.onImageDataChange.connect(lambda x: logger.debug("imagedata changed"))
 
     def get_data(self):
         data = {}
@@ -49,7 +50,6 @@ class ImageState(QObject):
         self.instance.onSRGBColorSpace.emit(d["colorProfile"] == "sRGB")
 
     def compare_data(self, data1, data2):
-        # print(data1, data2)
         self.check_color_profile()
         for key, value in data1.items():
             if key == "size":
@@ -62,14 +62,14 @@ class ImageState(QObject):
         return len(dir(data1)) == len(dir(data2))
 
     def on_properties_change(self):
-        print("improp change")
+        logger.info("improp change")
         is_eq = self.compare_data(self.get_data(), self.data)
         if not is_eq:
             self.onImageDataChange.emit(self.get_data())
         self.data = self.get_data()
 
     def setup_listening(self):
-        QtWidgets.qApp.installEventFilter(self)
+        QtWidgets.QApplication.instance().installEventFilter(self)
 
         def history_emit(_):
             self.data["paint"] = False
@@ -91,12 +91,15 @@ class ImageState(QObject):
         )
 
     def eventFilter(self, obj, event): 
+
         if obj.metaObject().className() == "KisOpenGLCanvas2" or obj.metaObject().className() == "KisQPainterCanvas":
-            if event.type() == 93 or (event.type() == 3 and event.button() == 1) or event.type()== 196:
-                print(obj, type(obj).__bases__)
+            if (event.type() == 3):
+                logger.debug("ImageState event filter type=3 button=%s", event.button())
+            if event.type() == 93 or (event.type() == 3 and event.button() == LeftButton) or event.type()== 196:
+                logger.debug("ImageState event filter: obj=%s base=%s", obj, type(obj).__bases__)
                 self.data["paint"] = True
                 self.onPixelsChange.emit(self.data)
-                print("painted Something on")
+                logger.debug("painted Something on")
         return False
 
 

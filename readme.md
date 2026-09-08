@@ -61,13 +61,10 @@ The plugin consists of two parts: one for Blender and one for Krita.
   let
   ...
   kritaWithPlugin = pkgs.krita.override {
-    unwrapped = pkgs.krita.unwrapped.overrideAttrs (old: {
-      patches =
-        old.patches
-        or []
-        ++ [
-          ./patches/uv-select.patch
-        ];
+    krita-unwrapped = pkgs.krita-unwrapped.overrideAttrs (old: {
+      patches = old.patches or [ ] ++ [
+        ./patches/uv-select.patch
+      ];
     });
   };
   in ...

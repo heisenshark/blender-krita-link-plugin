@@ -1,10 +1,18 @@
-from PyQt5.QtWidgets import QListWidget, QWidget, QSizePolicy, QListWidgetItem
-from PyQt5.QtCore import pyqtSignal, QSize
+from ..qt_compat import (
+    QListWidget,
+    QWidget,
+    QSizePolicy,
+    QListWidgetItem,
+    pyqtSignal,
+    QSize,
+    SizePreferred,
+)
 from .ImageItem import ImageItem
 from KritaBlenderLink.connection import (
     ConnectionManager,
     MessageListener,
 )
+from ..logger import logger
 
 
 class ImageList(QListWidget):
@@ -15,15 +23,16 @@ class ImageList(QListWidget):
     def __init__(
         self, con_manager: ConnectionManager, parent: QWidget
     ) -> None:
+        super().__init__(parent)
         ImageList.instance = self
         self.conn_manager = con_manager
-        super().__init__(parent)
         self.setObjectName("ImageList")
         self.setObjectName("scrollArea")
         self.setMinimumSize(QSize(0, 40))
+        logger.info("ImageList initialized successfully")
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy = QSizePolicy(SizePreferred, SizePreferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(
@@ -40,9 +49,8 @@ class ImageList(QListWidget):
     
     def update_images_list(self, images_list: list[object], str_filter:str|None=None):
         str_filter = str_filter if str_filter != "" else None
-        print("update time")
+        logger.debug("update_images_list called with %s images", len(images_list))
         self.clear_images_list()
-        print("items to be removed", len(images_list))
         def compute_index(text):
             return text.upper().find(str_filter.upper()) if str_filter is not None else 1 
         if len(images_list) > 10: 

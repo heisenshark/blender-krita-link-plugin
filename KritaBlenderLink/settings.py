@@ -1,4 +1,5 @@
 from krita import Krita
+from .logger import logger
 
 import json
 
@@ -10,7 +11,7 @@ class Settings:
     def __init__(self) -> None:
         x = Krita.instance().readSetting("", "blenderKritaSettings", "")
         Settings.instance = self
-        print(x)
+        logger.debug("Read settings raw string: %s", x)
         if not x:
             Settings.instance.data = {"listenCanvas": True}
             Krita.instance().writeSetting(
@@ -21,7 +22,7 @@ class Settings:
 
     def save_settings():
         settings = Settings.instance.data
-        print(settings)
+        logger.debug("Saving settings dict: %s", settings)
         if not settings:
             settings = {"listenCanvas": True}
         Krita.instance().writeSetting("", "blenderKritaSettings", json.dumps(settings))

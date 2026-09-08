@@ -1,14 +1,20 @@
 from time import sleep
-from PyQt5.QtWidgets import (
+from ..qt_compat import (
     QWidget,
     QSizePolicy,
     QHBoxLayout,
     QSpacerItem,
     QLabel,
     QMenu,
+    SizePreferred,
+    SizeExpanding,
+    SizeMinimum,
+    SizeMinimumExpanding,
+    SizeFixed,
 )
 from krita import Krita
 from KritaBlenderLink.connection import ConnectionManager, blender_image_as_new_layer, open_as_new_document, link_image, link_layer
+from ..logger import logger
 
 class ImageItem(QWidget):
     def __init__(self, image,conn_manager: ConnectionManager, parent=None):
@@ -28,7 +34,7 @@ class ImageItem(QWidget):
             width = document.width()
 
         self.setObjectName("ListItem")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy1 = QSizePolicy(SizePreferred, SizePreferred)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
@@ -53,14 +59,14 @@ class ImageItem(QWidget):
         self.label_size.setObjectName("label_size")
 
         self.horizontalSpacer_2 = QSpacerItem(
-            40, 10, QSizePolicy.Expanding, QSizePolicy.Minimum
+            40, 10, SizeExpanding, SizeMinimum
         )
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
 
         self.horizontalLayout_2.addWidget(self.label_size)
 
-        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        sizePolicy2 = QSizePolicy(SizeMinimumExpanding, SizeFixed)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
         self.setLayout(self.horizontalLayout_2)
@@ -97,26 +103,26 @@ class ImageItem(QWidget):
             unlinkImageAct.setDisabled(True)
             linkImageAct.setDisabled(True)
         
-        action = cmenu.exec_(self.mapToGlobal(event.pos()))
-        print(action)
+        action = cmenu.exec(self.mapToGlobal(event.pos()))
+        logger.debug("ImageItem context menu action selected: %s", action.text() if action else "None")
         if action == linkImageAct:
-            print("link selected")
+            logger.info("link selected")
             link_image(self.image,self.conn_manager) 
         elif action == linkLayer:
-            print("linking layer")
+            logger.info("linking layer")
             link_layer(self.image,self.conn_manager)
         elif action == unlinkImageAct:
-            print("unlinking image")
+            logger.info("unlinking image")
             self.conn_manager.remove_link(self.image["name"])
         elif action == openAct:
-            print("from blender to krita selected")
+            logger.info("from blender to krita selected")
             blender_image_as_new_layer(self.image,self.conn_manager)
         elif action == openAsNewDocumentAct:
             open_as_new_document(self.image,self.conn_manager)
-            print("dupa") 
+            logger.info("Open as new document triggered") 
         elif action == openAsNewDocumentLinkAct:
             open_as_new_document(self.image,self.conn_manager,True)
-            print("dupa") 
+            logger.info("Open as new document and link triggered")
 
     def mouseDoubleClickEvent(self, a0 )-> None: 
         if (

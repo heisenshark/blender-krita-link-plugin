@@ -16,5 +16,4 @@ else() # Linux AppImage
     install(TARGETS kritashapesselection DESTINATION ${PACKAGE_DIR}/lib/kritaplugins)
 endif()
 
-install(FILES kritashapesselection.action DESTINATION ${DATA_INSTALL_DIR}/krita/actions)
-install(FILES kritashapesselection.action DESTINATION ${PACKAGE_DIR}/${DATA_INSTALL_DIR}/krita/actions)
+install(FILES kritashapesselection.action DESTINATION ${KDE_INSTALL_DATADIR}/krita/actions)
