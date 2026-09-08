@@ -7,6 +7,7 @@ on:
       - 'master'
     paths:
       - 'cppPart/**'
+      - 'flake.nix'
       - '.github/workflows/build-cpp-plugins.yml'
     tags:
       - 'v*'
@@ -20,62 +21,24 @@ on:
 
 jobs:
   build-linux:
-    name: Build Linux .so
-    runs-on: ubuntu-22.04
+    name: Build Linux .so via Nix
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install build dependencies
-        run: |
-          sudo sed -Ei 's/^# deb-src /deb-src /' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources || true
-          sudo sed -Ei 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/*.sources || true
-          sudo apt-get update
-          sudo apt-get build-dep -y krita || true
-          sudo apt-get install -y \
-            build-essential cmake ninja-build patchelf zip extra-cmake-modules \
-            qtbase5-dev libqt5svg5-dev libqt5x11extras5-dev qtdeclarative5-dev qtmultimedia5-dev \
-            libkf5config-dev libkf5widgetsaddons-dev libkf5completion-dev \
-            libkf5coreaddons-dev libkf5guiaddons-dev libkf5i18n-dev \
-            libkf5itemviews-dev libkf5kio-dev libkf5windowsystem-dev libkf5crash-dev libboost-dev
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          extra_nix_config: |
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+            substituters = https://cache.nixos.org/
 
-      - name: Shallow clone Krita source tree (${{ github.event.inputs.krita_branch || 'krita/6.0' }})
+      - name: Build portable Linux plugin via Nix Flake
         run: |
-          BRANCH="${{ github.event.inputs.krita_branch || 'krita/6.0' }}"
-          echo "Cloning branch: $BRANCH"
-          git clone --depth 1 --branch "$BRANCH" https://invent.kde.org/graphics/krita.git ~/krita-src
-
-      - name: Inject uv-select into Krita build tree
-        run: |
-          cp -r cppPart/uv-select ~/krita-src/plugins/uv-select
-          echo "add_subdirectory(uv-select)" >> ~/krita-src/plugins/CMakeLists.txt
-
-      - name: Configure CMake
-        run: |
-          cmake -B ~/krita-build -S ~/krita-src -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTING=OFF \
-            -DKRITA_ENABLE_PYTHON_2=OFF
-
-      - name: Build kritashapesselection target
-        run: |
-          ninja -C ~/krita-build kritashapesselection
-
-      - name: Package and sanitize Linux .so
-        run: |
-          mkdir -p dist/lib/kritaplugins dist/share/krita/actions
-          
-          # Find and copy the compiled .so
-          SO_PATH=$(find ~/krita-build -name "kritashapesselection.so" | head -n 1)
-          cp "$SO_PATH" dist/lib/kritaplugins/
-          cp cppPart/uv-select/kritashapesselection.action dist/share/krita/actions/
-          
-          # Strip hardcoded runner paths and set relative origin RPATH
-          patchelf --set-rpath '$ORIGIN/..:$ORIGIN' dist/lib/kritaplugins/kritashapesselection.so
-          
-          # Create zip package
-          cd dist && zip -r ../uv-select-linux.zip lib/ share/ && cd ..
+          nix build .#portable-plugin --out-link result-plugin
+          cp result-plugin/dist/uv-select-linux.zip ./uv-select-linux.zip
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
@@ -84,38 +47,44 @@ jobs:
           path: uv-select-linux.zip
 
   build-windows:
-    name: Build Windows .dll
+    name: Build Windows .dll via MSYS2 UCRT64
     runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup MSYS2 with KDE Frameworks & Qt
+      - name: Setup MSYS2 UCRT64
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           update: true
           install: >-
             base-devel
             git
             zip
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-extra-cmake-modules
-            mingw-w64-x86_64-qt5-base
-            mingw-w64-x86_64-qt5-svg
-            mingw-w64-x86_64-kf5-kconfig
-            mingw-w64-x86_64-kf5-kwidgetsaddons
-            mingw-w64-x86_64-kf5-kcompletion
-            mingw-w64-x86_64-kf5-kcoreaddons
-            mingw-w64-x86_64-kf5-kguiaddons
-            mingw-w64-x86_64-kf5-ki18n
-            mingw-w64-x86_64-kf5-kitemviews
-            mingw-w64-x86_64-boost
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-extra-cmake-modules
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-kconfig
+            mingw-w64-ucrt-x86_64-kwidgetsaddons
+            mingw-w64-ucrt-x86_64-kcompletion
+            mingw-w64-ucrt-x86_64-kcoreaddons
+            mingw-w64-ucrt-x86_64-kguiaddons
+            mingw-w64-ucrt-x86_64-ki18n
+            mingw-w64-ucrt-x86_64-kitemviews
+            mingw-w64-ucrt-x86_64-immer
+            mingw-w64-ucrt-x86_64-lager
+            mingw-w64-ucrt-x86_64-zug
+            mingw-w64-ucrt-x86_64-boost
+            mingw-w64-ucrt-x86_64-eigen3
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-libpng
 
-      - name: Shallow clone Krita source tree (${{ github.event.inputs.krita_branch || 'krita/6.0' }})
+      - name: Shallow clone Krita source tree
         shell: msys2 {0}
         run: |
           BRANCH="${{ github.event.inputs.krita_branch || 'krita/6.0' }}"
@@ -133,6 +102,7 @@ jobs:
         run: |
           cmake -B ~/krita-build -S ~/krita-src -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_WITH_QT6=ON \
             -DBUILD_TESTING=OFF \
             -DKRITA_ENABLE_PYTHON_2=OFF
 
@@ -146,6 +116,12 @@ jobs:
         run: |
           mkdir -p dist/bin dist/share/krita/actions
           DLL_PATH=$(find ~/krita-build -name "kritashapesselection.dll" | head -n 1)
+          if [ -z "$DLL_PATH" ]; then
+            echo "Error: kritashapesselection.dll not found in build dir!"
+            find ~/krita-build -name "*.dll"
+            exit 1
+          fi
+          echo "Found DLL at: $DLL_PATH"
           cp "$DLL_PATH" dist/bin/
           cp cppPart/uv-select/kritashapesselection.action dist/share/krita/actions/
           cd dist && zip -r ../uv-select-windows.zip * && cd ..
