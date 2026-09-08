@@ -1,0 +1,156 @@
+name: Build C++ Plugin (Linux & Windows)
+
+on:
+  push:
+    branches:
+      - '6.0'
+      - 'master'
+    paths:
+      - 'cppPart/**'
+      - '.github/workflows/build-cpp-plugins.yml'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      krita_branch:
+        description: 'Krita branch or tag to build against (e.g. krita/6.0, master, release/6.0.3)'
+        required: true
+        default: 'krita/6.0'
+        type: string
+
+jobs:
+  build-linux:
+    name: Build Linux .so
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build patchelf zip \
+            qt6-base-dev qt6-svg-dev libqt6core5compat6-dev \
+            libkf6config-dev libkf6widgetsaddons-dev libkf6completion-dev \
+            libkf6coreaddons-dev libkf6guiaddons-dev libkf6i18n-dev \
+            libkf6itemviews-dev libkf6kio-dev libboost-dev || true
+
+      - name: Shallow clone Krita source tree (${{ github.event.inputs.krita_branch || 'krita/6.0' }})
+        run: |
+          BRANCH="${{ github.event.inputs.krita_branch || 'krita/6.0' }}"
+          echo "Cloning branch: $BRANCH"
+          git clone --depth 1 --branch "$BRANCH" https://invent.kde.org/graphics/krita.git ~/krita-src
+
+      - name: Inject uv-select into Krita build tree
+        run: |
+          cp -r cppPart/uv-select ~/krita-src/plugins/uv-select
+          echo "add_subdirectory(uv-select)" >> ~/krita-src/plugins/CMakeLists.txt
+
+      - name: Configure CMake
+        run: |
+          cmake -B ~/krita-build -S ~/krita-src -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF \
+            -DKRITA_ENABLE_PYTHON_2=OFF
+
+      - name: Build kritashapesselection target
+        run: |
+          ninja -C ~/krita-build kritashapesselection
+
+      - name: Package and sanitize Linux .so
+        run: |
+          mkdir -p dist/lib/kritaplugins dist/share/krita/actions
+          
+          # Find and copy the compiled .so
+          SO_PATH=$(find ~/krita-build -name "kritashapesselection.so" | head -n 1)
+          cp "$SO_PATH" dist/lib/kritaplugins/
+          cp cppPart/uv-select/kritashapesselection.action dist/share/krita/actions/
+          
+          # Strip hardcoded runner paths and set relative origin RPATH
+          patchelf --set-rpath '$ORIGIN/..:$ORIGIN' dist/lib/kritaplugins/kritashapesselection.so
+          
+          # Create zip package
+          cd dist && zip -r ../uv-select-linux.zip lib/ share/ && cd ..
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uv-select-linux
+          path: uv-select-linux.zip
+
+  build-windows:
+    name: Build Windows .dll
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Ninja
+        run: choco install ninja
+
+      - name: Shallow clone Krita source tree (${{ github.event.inputs.krita_branch || 'krita/6.0' }})
+        run: |
+          $branch = "${{ github.event.inputs.krita_branch }}"
+          if ([string]::IsNullOrWhiteSpace($branch)) { $branch = "krita/6.0" }
+          Write-Host "Cloning branch: $branch"
+          git clone --depth 1 --branch $branch https://invent.kde.org/graphics/krita.git "$env:USERPROFILE\krita-src"
+
+      - name: Inject uv-select into Krita build tree
+        run: |
+          Copy-Item -Recurse cppPart\uv-select "$env:USERPROFILE\krita-src\plugins\uv-select"
+          Add-Content -Path "$env:USERPROFILE\krita-src\plugins\CMakeLists.txt" -Value "`nadd_subdirectory(uv-select)"
+
+      - name: Configure CMake
+        run: |
+          cmake -B "$env:USERPROFILE\krita-build" -S "$env:USERPROFILE\krita-src" -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_TESTING=OFF
+
+      - name: Build kritashapesselection target
+        run: |
+          ninja -C "$env:USERPROFILE\krita-build" kritashapesselection
+
+      - name: Package Windows .dll
+        run: |
+          New-Item -ItemType Directory -Force -Path dist\bin, dist\share\krita\actions
+          $dll = Get-ChildItem -Path "$env:USERPROFILE\krita-build" -Filter "kritashapesselection.dll" -Recurse | Select-Object -First 1
+          Copy-Item $dll.FullName dist\bin\
+          Copy-Item cppPart\uv-select\kritashapesselection.action dist\share\krita\actions\
+          Compress-Archive -Path dist\* -DestinationPath uv-select-windows.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uv-select-windows
+          path: uv-select-windows.zip
+
+  release:
+    name: Publish Release Packages
+    needs: [build-linux, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: uv-select-linux
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: uv-select-windows
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            uv-select-linux.zip
+            uv-select-windows.zip

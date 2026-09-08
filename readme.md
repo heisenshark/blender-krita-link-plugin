@@ -48,31 +48,40 @@ The plugin consists of two parts: one for Blender and one for Krita.
 - Compile again and create an AppImage as in tutorials if you are using Linux.
 - Extract libraries and action files to your Krita installation as described in this [repository](https://github.com/Acly/krita-ai-tools).
 
-#### nixos installation
+#### NixOS & Portable Plugin Compilation
 
-- Change the krita project with the files provided in cppPart(also add `add_subdirectory( uv-select )` to plugins/CmakeLists.txt).
-- Create the patch using `git diff > uv-select.patch`(the path might be in the downloads also).
-- Modify krita package in your system.
+##### 1. Local NixOS Build (Portable `.so`)
+You can build Krita with the C++ plugin and automatically extract a portable `.so` (with sanitized `$ORIGIN` RPATH so it works on any Linux system, Flatpak, or AppImage):
 
+```bash
+# Build the portable .so and zip package:
+./build-cpp-nix.sh
+# Or directly via nix:
+nix build .#portable-plugin
+```
+The output package will be generated at `./uv-select-linux.zip`.
+
+##### 2. Running Krita with Plugin on NixOS directly:
+```bash
+nix run .#krita
+```
+Or in your system configuration flake:
 ```nix
-# using flakes
-  let
-  ...
-  kritaWithPlugin = pkgs.krita.override {
-    krita-unwrapped = pkgs.krita-unwrapped.overrideAttrs (old: {
-      patches = old.patches or [ ] ++ [
-        ./patches/uv-select.patch
-      ];
-    });
-  };
-  in ...
+let
+  bkl = inputs.blender-krita-link; # input to your flake
+in {
+  environment.systemPackages = [
+    bkl.packages.${pkgs.system}.krita
+  ];
+}
 ```
 
-- Put the package in your system config.
+##### 3. Building both `.dll` (Windows) and `.so` (Linux) via GitHub Actions
+Because compiling Windows `.dll` binaries for Krita on Linux requires a full Windows SDK setup, a GitHub Actions workflow is provided under `.github/workflows/build-cpp-plugins.yml`:
+- In your GitHub repo, go to **Actions > Build C++ Plugin > Run workflow**.
+- In minutes, it builds both **`uv-select-linux.zip`** (`.so`) and **`uv-select-windows.zip`** (`.dll`) and makes them available for direct download as workflow artifacts (and attaches them automatically to any release tag).
 
-Also you could probably use the postInstall to extract the files into krita installation or some other way to not use the patches like extracting cpp files from this repo before the compilation by some script(If you found a method like that feel free to submit pr).
-
-UVSelectionAddition is not required for the Python plugin to work but offers additional features.
+UVSelectionAddition is not required for the Python plugin to work but offers native vector selection features.
 
 ## Usage
 

@@ -11,6 +11,12 @@
 !panel.png
 /KritaBlenderLink/__pycache__
 !KritaBlenderLink.desktop
+!flake.nix
+!flake.lock
+!default.nix
+!build-cpp-nix.sh
+!.github
+!.github/**
 **/__pycache__
 */.vscode
 connection/__pycache__
