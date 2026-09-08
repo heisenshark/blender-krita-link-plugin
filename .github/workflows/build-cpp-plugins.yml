@@ -29,13 +29,16 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          sudo sed -Ei 's/^# deb-src /deb-src /' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources || true
+          sudo sed -Ei 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/*.sources || true
           sudo apt-get update
+          sudo apt-get build-dep -y krita || true
           sudo apt-get install -y \
             build-essential cmake ninja-build patchelf zip extra-cmake-modules \
-            qtbase5-dev libqt5svg5-dev \
+            qtbase5-dev libqt5svg5-dev libqt5x11extras5-dev qtdeclarative5-dev qtmultimedia5-dev \
             libkf5config-dev libkf5widgetsaddons-dev libkf5completion-dev \
             libkf5coreaddons-dev libkf5guiaddons-dev libkf5i18n-dev \
-            libkf5itemviews-dev libkf5kio-dev libboost-dev
+            libkf5itemviews-dev libkf5kio-dev libkf5windowsystem-dev libkf5crash-dev libboost-dev
 
       - name: Shallow clone Krita source tree (${{ github.event.inputs.krita_branch || 'krita/6.0' }})
         run: |
@@ -88,54 +91,64 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up MSVC environment
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Install Ninja
-        run: choco install ninja
-
-      - name: Install Qt 5
-        uses: jurplel/install-qt-action@v3
+      - name: Setup MSYS2 with KDE Frameworks & Qt
+        uses: msys2/setup-msys2@v2
         with:
-          version: '5.15.2'
-          arch: 'win64_msvc2019_64'
-
-      - name: Install Extra CMake Modules (ECM)
-        run: |
-          git clone --depth 1 --branch v5.91.0 https://invent.kde.org/frameworks/extra-cmake-modules.git "$env:USERPROFILE\ecm"
-          cmake -B "$env:USERPROFILE\ecm-build" -S "$env:USERPROFILE\ecm" -DCMAKE_INSTALL_PREFIX="C:\ECM"
-          cmake --install "$env:USERPROFILE\ecm-build"
+          msystem: MINGW64
+          update: true
+          install: >-
+            base-devel
+            git
+            zip
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-extra-cmake-modules
+            mingw-w64-x86_64-qt5-base
+            mingw-w64-x86_64-qt5-svg
+            mingw-w64-x86_64-kf5-kconfig
+            mingw-w64-x86_64-kf5-kwidgetsaddons
+            mingw-w64-x86_64-kf5-kcompletion
+            mingw-w64-x86_64-kf5-kcoreaddons
+            mingw-w64-x86_64-kf5-kguiaddons
+            mingw-w64-x86_64-kf5-ki18n
+            mingw-w64-x86_64-kf5-kitemviews
+            mingw-w64-x86_64-boost
 
       - name: Shallow clone Krita source tree (${{ github.event.inputs.krita_branch || 'krita/6.0' }})
+        shell: msys2 {0}
         run: |
-          $branch = "${{ github.event.inputs.krita_branch }}"
-          if ([string]::IsNullOrWhiteSpace($branch)) { $branch = "krita/6.0" }
-          Write-Host "Cloning branch: $branch"
-          git clone --depth 1 --branch $branch https://invent.kde.org/graphics/krita.git "$env:USERPROFILE\krita-src"
+          BRANCH="${{ github.event.inputs.krita_branch || 'krita/6.0' }}"
+          echo "Cloning branch: $BRANCH"
+          git clone --depth 1 --branch "$BRANCH" https://invent.kde.org/graphics/krita.git ~/krita-src
 
       - name: Inject uv-select into Krita build tree
+        shell: msys2 {0}
         run: |
-          Copy-Item -Recurse cppPart\uv-select "$env:USERPROFILE\krita-src\plugins\uv-select"
-          Add-Content -Path "$env:USERPROFILE\krita-src\plugins\CMakeLists.txt" -Value "`nadd_subdirectory(uv-select)"
+          cp -r cppPart/uv-select ~/krita-src/plugins/uv-select
+          echo "add_subdirectory(uv-select)" >> ~/krita-src/plugins/CMakeLists.txt
 
       - name: Configure CMake
+        shell: msys2 {0}
         run: |
-          cmake -B "$env:USERPROFILE\krita-build" -S "$env:USERPROFILE\krita-src" -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_PREFIX_PATH="C:\ECM" `
-            -DBUILD_TESTING=OFF
+          cmake -B ~/krita-build -S ~/krita-src -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF \
+            -DKRITA_ENABLE_PYTHON_2=OFF
 
       - name: Build kritashapesselection target
+        shell: msys2 {0}
         run: |
-          ninja -C "$env:USERPROFILE\krita-build" kritashapesselection
+          ninja -C ~/krita-build kritashapesselection
 
       - name: Package Windows .dll
+        shell: msys2 {0}
         run: |
-          New-Item -ItemType Directory -Force -Path dist\bin, dist\share\krita\actions
-          $dll = Get-ChildItem -Path "$env:USERPROFILE\krita-build" -Filter "kritashapesselection.dll" -Recurse | Select-Object -First 1
-          Copy-Item $dll.FullName dist\bin\
-          Copy-Item cppPart\uv-select\kritashapesselection.action dist\share\krita\actions\
-          Compress-Archive -Path dist\* -DestinationPath uv-select-windows.zip
+          mkdir -p dist/bin dist/share/krita/actions
+          DLL_PATH=$(find ~/krita-build -name "kritashapesselection.dll" | head -n 1)
+          cp "$DLL_PATH" dist/bin/
+          cp cppPart/uv-select/kritashapesselection.action dist/share/krita/actions/
+          cd dist && zip -r ../uv-select-windows.zip * && cd ..
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
