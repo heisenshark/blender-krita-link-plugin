@@ -101,6 +101,7 @@ jobs:
         run: |
           cp -r cppPart/uv-select ~/krita-src/plugins/uv-select
           echo "add_subdirectory(uv-select)" >> ~/krita-src/plugins/CMakeLists.txt
+          sed -i 's/BUILD_WITH_QT6 AND NOT "QT6" IN_LIST ALLOW_UNSTABLE/FALSE/' ~/krita-src/CMakeLists.txt || true
 
       - name: Configure CMake
         shell: msys2 {0}
