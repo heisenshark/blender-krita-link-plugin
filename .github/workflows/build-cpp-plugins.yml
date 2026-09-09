@@ -13,6 +13,10 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      build_linux:
+        description: 'Build Linux .so'
+        type: boolean
+        default: true
       krita_branch:
         description: 'Krita branch or tag to build against (e.g. krita/6.0, master, release/6.0.3)'
         required: true
@@ -23,6 +27,7 @@ jobs:
   build-linux:
     name: Build Linux .so via Nix
     runs-on: ubuntu-latest
+    if: (github.event_name == 'workflow_dispatch' && inputs.build_linux) || startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout repository
@@ -103,6 +108,7 @@ jobs:
           cmake -B ~/krita-build -S ~/krita-src -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_WITH_QT6=ON \
+            -DALLOW_UNSTABLE=QT6 \
             -DBUILD_TESTING=OFF \
             -DKRITA_ENABLE_PYTHON_2=OFF
 
