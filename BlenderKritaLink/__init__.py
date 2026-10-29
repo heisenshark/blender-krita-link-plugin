@@ -10,7 +10,7 @@ from .logger import logger, configure_logger
 bl_info = {
     "name": "Blender Krita link",
     "author": "Heisenshark",
-    "version": (0, 1),
+    "version": (0, 4),
     "blender": (2, 80, 0),
     "category": "Paint",
     "description":"companion to blender krita link plugin, shows connection status and updates images"
