@@ -10,7 +10,7 @@ This plugin offers a seamless way to edit Blender images in Krita without the ne
 
 - Links Blender textures with Krita files.
 - Imports Blender textures as new layers.
-- Selects UV faces in Blender (they must be selected in both edit mode and UV editor; this feature requires the C++ plugin).
+- Creates a Krita pixel selection matching the selected Blender UV faces, entirely in Python. Faces must be selected in both edit mode and the UV editor. No C++ plugin is required.
 - Transfers UV maps from selected objects in Blender to Krita.
 - Offers Shortcuts for sending image, toggling uvs and getting uvs.
 
@@ -39,7 +39,9 @@ The Blender add-on requires Blender 3.3 or newer.
 
 - Place `KritaBlenderLink` and `KritaBlenderLink.desktop` in the `<kritainstallation>/pykrita/` directory.
 
-### UVselectAddition Installation
+### Legacy UVselectAddition Installation (optional)
+
+The Select button now creates a pixel selection in Python and does not use this addition. These instructions are retained for the legacy native vector selection plugin.
 
 - download uv selection addition for your system \[windows / linux\] from [releases](https://github.com/heisenshark/blender-krita-link-plugin/releases) page
 - unpack it in your krita program directory

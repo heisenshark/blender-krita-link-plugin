@@ -1,5 +1,5 @@
 from krita import Extension
-from krita import Krita, DockWidget, Notifier
+from krita import Krita, DockWidget, Notifier, Selection
 import os as os
 import asyncio
 from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
@@ -30,6 +30,7 @@ from .settings import Settings
 from .ImageState import ImageState
 from .lb import ColorButtonFilter, Debouncer
 from .logger import logger
+from .uv_selection import uv_selection_pixels
 
 DOCKER_TITLE = "Blender Krita Link"
 
@@ -467,21 +468,23 @@ class BlenderKritaLink(DockWidget):
         asyncio.run(self.connection.request({"type": "GET_UV_OVERLAY"}))
 
     def handle_uv_response(self, message):
-        action = Krita.instance().action("select_shapes")
-        width_height = [
-            Krita.instance().activeDocument().width(),
-            Krita.instance().activeDocument().height(),
-        ]
-        faces = message["data"]
-        if action is not None:
-            logger.debug("action 'select_shapes' exists, triggering select")
-            for g in faces:
-                for f in g:
-                    f[0] *= width_height[0]
-                    f[1] *= width_height[1]
-            action.setData(faces)
-            action.trigger()
-            action.setData([])
+        document = Krita.instance().activeDocument()
+        if document is None:
+            return
+        width, height = document.width(), document.height()
+        pixels = uv_selection_pixels(message["data"], width, height)
+        selection = Selection()
+        selection.setPixelData(QByteArray(pixels), 0, 0, width, height)
+        document.setSelection(selection)
+        # Attach first: a standalone Selection has no image bounds, so invert
+        # takes a different code path that can preserve the stale outline.
+        selection = document.selection().duplicate()
+        # libkis setPixelData writes bytes without invalidating the cached
+        # outline. Inverting twice preserves the mask but invalidates that
+        # cache, allowing Krita to rebuild its native marching-ants border.
+        selection.invert()
+        selection.invert()
+        document.setSelection(selection)
 
     def uv_to_new_layer(self):
         krita_instance = Krita.instance()
