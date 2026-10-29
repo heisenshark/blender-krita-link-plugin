@@ -39,7 +39,10 @@ class ImageManager:
             len(image_pixels) / width / 4,
             len(image_pixels) / height / 4,
         )
-        image_pixels = image_pixels.reshape(-1, 4)
+        if len(image_pixels) != len(image.pixels) or len(image_pixels) != width * height * 4:
+            raise ValueError("Image dimensions or channel count do not match the transferred pixels")
+        # Do not reorder channels in the shared buffer itself.
+        image_pixels = image_pixels.reshape(-1, 4).copy()
         logger.debug("reshaped complete")
         if isinstance(image_pixels[0][0], np.uint16) or isinstance(
             image_pixels[0][0], np.uint8
@@ -47,8 +50,6 @@ class ImageManager:
             image_pixels[:, [2, 0]] = image_pixels[:, [0, 2]]
         logger.debug("flipped complete")
 
-        image_pixels.resize(len(image.pixels))
-        logger.debug("resized complete")
         pixels_reshaped = image_pixels.reshape((height, width, 4))
         logger.debug("reshaped2 complete")
         mirrored_pixels = np.flipud(pixels_reshaped).flatten()
@@ -62,7 +63,7 @@ class ImageManager:
 
         if isinstance(mirrored_pixels[0], np.uint16):
             mirrored_pixels = np.divide(
-                mirrored_pixels, np.array(np.float32(255 * 255))
+                mirrored_pixels, np.array(np.float32(65535))
             )
 
         if isinstance(mirrored_pixels[0], np.uint8):

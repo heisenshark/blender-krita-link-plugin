@@ -11,7 +11,7 @@ bl_info = {
     "name": "Blender Krita link",
     "author": "Heisenshark",
     "version": (0, 4),
-    "blender": (2, 80, 0),
+    "blender": (3, 3, 0),
     "category": "Paint",
     "description":"companion to blender krita link plugin, shows connection status and updates images"
 }
@@ -94,6 +94,7 @@ def init_connection():
     KritaConnection.PORT = new_port
     connection_instance = KritaConnection()
     connection_instance.start()
+    bpy.app.timers.register(connection_instance.process_pending_messages, persistent=True)
 
 def register():
     bpy.utils.register_class(_PT_BlenderKritaLinkPanel)
@@ -111,9 +112,16 @@ def register():
 
 
 def unregister():
-    KritaConnection.LINK_INSTANCE.cleanup()
+    if bpy.app.timers.is_registered(init_connection):
+        bpy.app.timers.unregister(init_connection)
+    connection = KritaConnection.LINK_INSTANCE
+    if connection is not None:
+        if bpy.app.timers.is_registered(connection.process_pending_messages):
+            bpy.app.timers.unregister(connection.process_pending_messages)
+        connection.cleanup()
+        KritaConnection.LINK_INSTANCE = None
     bpy.utils.unregister_class(GlobalStore)
-    # bpy.utils.unregister_class(_PT_BlenderKritaLinkPanel)
+    bpy.utils.unregister_class(_PT_BlenderKritaLinkPanel)
     bpy.utils.unregister_class(DisconnectOperator)
     if  bpy.app.timers.is_registered(update_panel_watch):
         bpy.app.timers.unregister(update_panel_watch)

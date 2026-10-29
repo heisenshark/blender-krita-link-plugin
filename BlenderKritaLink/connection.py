@@ -1,5 +1,6 @@
 from multiprocessing.connection import Connection, Listener, Client
 from threading import Thread, Event
+from queue import Queue, Empty
 from multiprocessing import shared_memory
 import bpy
 import numpy as np
@@ -12,7 +13,7 @@ from .logger import logger, configure_logger
 
 
 @contextmanager
-def shared_memory_context(name: str, size: int, destroy: bool, create=bool):
+def shared_memory_context(name: str, size: int, destroy: bool, create=False):
     shm = None
     if size is None:
         shm = shared_memory.SharedMemory(name=name, create=create)
@@ -22,9 +23,10 @@ def shared_memory_context(name: str, size: int, destroy: bool, create=bool):
     try:
         yield shm
     finally:
-        if destroy:
-            shm.unlink()
-        else:
+        try:
+            if destroy:
+                shm.unlink()
+        finally:
             shm.close()
 
 
@@ -37,22 +39,38 @@ class KritaConnection:
     listener = None
 
     def __init__(self) -> None:
+        self.pending_messages = Queue()
         if not KritaConnection.LINK_INSTANCE:
             KritaConnection.LINK_INSTANCE = self
 
+    def process_pending_messages(self):
+        # Blender's Python API must be called from the main thread.
+        for _ in range(20):
+            try:
+                conn, msg = self.pending_messages.get_nowait()
+            except Empty:
+                break
+            if conn is not KritaConnection.CONNECTION or conn.closed:
+                continue
+            try:
+                self.handle_message(msg)
+            except Exception:
+                logger.error("Error handling message: %s", traceback.format_exc())
+                conn.close()
+        return 0.02
+
     def cleanup(self):
         logger.info("cleanup")
+        self.__STOP_SIGNAL.set()
         if KritaConnection.CONNECTION is not None:
-            logger.info("sending close")
-            self.__STOP_SIGNAL.set()
-
+            KritaConnection.CONNECTION.close()
         elif self.listener is not None:
-            logger.info("accepting")
-            with Client(
-                ("localhost", KritaConnection.PORT), authkey=b"2137"
-            ) as connection:
-                self.__STOP_SIGNAL.set()
-                connection.send("close")
+            try:
+                with Client(self.listener.address, authkey=KritaConnection.PASS) as connection:
+                    connection.send("close")
+            except (OSError, EOFError):
+                logger.debug("Listener already stopped")
+        self.__THREAD.join(timeout=2)
 
     def timeout_listener(self):
         if self.listener is not None:
@@ -65,10 +83,10 @@ class KritaConnection:
 
     def start(self):
         self.__STOP_SIGNAL = Event()
-        self.__THREAD = Thread(target=self.krita_listener)
-        self.__THREAD.start()
-        KritaConnection.CONNECTION: None | Connection = None
+        KritaConnection.CONNECTION = None
         KritaConnection.STATUS = "listening"
+        self.__THREAD = Thread(target=self.krita_listener, daemon=True)
+        self.__THREAD.start()
 
     def update_message(self, message: str):
         logger.info("UPDATING MESSAGE: %s", message)
@@ -106,7 +124,7 @@ class KritaConnection:
         d.pixels.foreach_get(np_arr)
         if msg["data"]["depth"][0] == "U":
             np_arr = np.rint(
-                np.multiply(np_arr, pow(255, bdepth))
+                np.clip(np_arr, 0.0, 1.0) * ((1 << (8 * bdepth)) - 1)
             )
         logger.info(
             "%s %s %s %s %s",
@@ -326,7 +344,7 @@ class KritaConnection:
                         self.update_message("closed")
                         break
                     else:
-                        self.handle_message(msg)
+                        self.pending_messages.put((conn, msg))
 
             except Exception as e:
                 logger.error("Error in listener loop: %s", traceback.format_exc())

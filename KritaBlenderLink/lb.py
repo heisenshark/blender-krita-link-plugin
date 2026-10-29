@@ -54,7 +54,7 @@ class ColorButtonFilter(QObject):
         return super().eventFilter(obj, event)
 
 @contextmanager
-def shared_memory_context(name: str, size: int, destroy: bool, create=bool):
+def shared_memory_context(name: str, size: int, destroy: bool, create=False):
     shm = None
     if size is None:
         shm = shared_memory.SharedMemory(name=name, create=create)
@@ -64,9 +64,10 @@ def shared_memory_context(name: str, size: int, destroy: bool, create=bool):
     try:
         yield shm
     finally:
-        if destroy:
-            shm.unlink()
-        else:
+        try:
+            if destroy:
+                shm.unlink()
+        finally:
             shm.close()
 
 def check_shared_memory_exists(name):

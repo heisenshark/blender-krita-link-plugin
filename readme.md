@@ -21,6 +21,7 @@ https://github.com/heisenshark/blender-krita-link-plugin/assets/46131664/45f3323
 ## Installation
 
 The plugin consists of two parts: one for Blender and one for Krita.
+The Blender add-on requires Blender 3.3 or newer.
 
 [download](https://github.com/heisenshark/blender-krita-link-plugin/archive/refs/heads/master.zip) the repo
 

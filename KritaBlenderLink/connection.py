@@ -1,11 +1,11 @@
 from KritaBlenderLink.settings import Settings
 from krita import Krita
-from threading import Thread
+from threading import Lock, Thread
 from multiprocessing.connection import Client
 from multiprocessing import shared_memory
 import asyncio
 import traceback
-from .lb import shared_memory_context, check_shared_memory_exists
+from .lb import shared_memory_context
 from .logger import logger, configure_logger
 
 
@@ -54,6 +54,8 @@ class ConnectionManager:
     linked_image = None
     images = []
     linked_images = {}
+    request_lock = Lock()
+    send_lock = Lock()
 
     def __init__(self) -> None:
         if Settings.getSetting("port") is not None:
@@ -63,6 +65,20 @@ class ConnectionManager:
 
     def set_images(self, images):
         self.images = images
+
+    @staticmethod
+    def release_memory(image):
+        memory = image.get("memoryObject")
+        if memory is None:
+            return
+        try:
+            try:
+                memory.unlink()
+            except FileNotFoundError:
+                pass
+        finally:
+            memory.close()
+            image["memoryObject"] = None
 
     def change_adress(self, adr):
         self.port = adr
@@ -77,6 +93,7 @@ class ConnectionManager:
         logger.info("connecting to port: %s", self.port)
         configure_logger(self.port)
         def thread():
+            connection = None
             try:
                 with Client(("localhost", self.port), authkey=b"2137") as connection:
                     logger.info("connection client created")
@@ -84,12 +101,12 @@ class ConnectionManager:
                     on_connect()
                     while True:
                         try:
-                            message_available = self.connection.poll(0.5)
+                            message_available = connection.poll(0.5)
                             if not message_available:
                                 continue
                             if self.connection is None or self.connection.closed:
                                 break
-                            message = self.connection.recv()
+                            message = connection.recv()
                             if message == "close":
                                 logger.info("closing connection message received")
                                 break
@@ -98,15 +115,15 @@ class ConnectionManager:
                             self.emit_message(message)
                         except Exception as e:
                             logger.error("Error on receiving messages: %s\n%s", e, traceback.format_exc())
-                            self.connection = None
-                            for img_name,img in self.linked_images.items():
-                                if img["memoryObject"] and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)+"_"+str(img_name)):
-                                    img["memoryObject"].unlink()
-                                    img["memoryObject"]= None
                             break
             except Exception as conn_err:
                 logger.error("Failed to establish connection to Blender on port %s: %s", self.port, conn_err)
-            on_disconnect()
+            finally:
+                if self.connection is connection:
+                    self.connection = None
+                    for img in list(self.linked_images.values()):
+                        self.release_memory(img)
+                    on_disconnect()
 
         t1 = Thread(target=thread)
         t1.start()
@@ -115,8 +132,7 @@ class ConnectionManager:
         """gets called when user closes connection"""
 
         for img_name,img in self.linked_images.items():
-            if img["memoryObject"] and check_shared_memory_exists("krita-blender"+str(ConnectionManager.port)+"_"+str(img_name)):
-                img["memoryObject"].unlink()
+            self.release_memory(img)
         self.linked_images = {}
         if self.connection:
             self.connection.close()
@@ -131,41 +147,34 @@ class ConnectionManager:
         if isinstance(message, object) and "type" in message and "data" in message:
             logger.debug("emitting message: listeners=%s msg=%s", ConnectionManager.listeners, format_message(message))
             event_type = message["type"]
-            for listener in ConnectionManager.listeners:
+            for listener in list(ConnectionManager.listeners):
                 if listener.event_type == event_type:
                     listener.recieve_message(message=message)
 
     def resize_memory(self, canvas_bytes_len:int,image_name:str):
         logger.debug("unlink memory for %s", image_name)
         linked_image = self.linked_images[image_name]
-        try:
-            if linked_image["memoryObject"]:
-                linked_image["memoryObject"].unlink()
-
-        except Exception as e:
-            logger.debug("memory unlink exception: %s", e)
+        self.release_memory(linked_image)
         name ="krita-blender"+str(ConnectionManager.port)+"_"+str(image_name)
-
-        if linked_image["memoryObject"] and check_shared_memory_exists(name):
-            linked_image["memoryObject"].unlink()
-            linked_image["memoryObject"] = None
 
         try:
             linked_image["memoryObject"] = shared_memory.SharedMemory(
                 name=name, create=True, size=canvas_bytes_len
             )
             logger.info("shared memory created: %s", name)
-        except Exception as e:
-            logger.debug("shared memory creation failed (file might exist), attempting attach: %s", e)
-            linked_image["memoryObject"] = shared_memory.SharedMemory(
-                name=name, create=False, size=canvas_bytes_len
-            )
+        except FileExistsError:
+            existing = shared_memory.SharedMemory(name=name, create=False)
+            if existing.size != canvas_bytes_len:
+                existing.close()
+                raise ValueError(f"Shared memory {name!r} has an unexpected size")
+            linked_image["memoryObject"] = existing
 
     def send_message(self, message):
-        if self.connection:
-            self.connection.send(message)
-        else:
-            logger.warning("no connection available to send message")
+        with ConnectionManager.send_lock:
+            if self.connection:
+                self.connection.send(message)
+            else:
+                logger.warning("no connection available to send message")
 
     def write_memory(self, bts,shm):
         logger.debug("write_memory: shm=%s, size=%s", shm, len(bts))
@@ -177,7 +186,7 @@ class ConnectionManager:
     def remove_link(self,image_name:str):
         keys = [x for x in self.linked_images.keys()]
         if image_name in keys:
-            self.linked_images[image_name]["memoryObject"].unlink()
+            self.release_memory(self.linked_images[image_name])
             del self.linked_images[image_name]
         asyncio.run(self.request({"data": "", "type": "GET_IMAGES"}))
 
@@ -189,19 +198,24 @@ class ConnectionManager:
         if self.connection:
             event_loop = asyncio.get_event_loop()
             future = event_loop.create_future()
-            requestId = ConnectionManager.requestId
+            with ConnectionManager.request_lock:
+                requestId = ConnectionManager.requestId
+                ConnectionManager.requestId += 1
             payload["requestId"] = requestId
-            ConnectionManager.requestId += 1
 
             async def task():
                 def on_nop(msg):
                     logger.debug("future cancelled: request nop response received")
-                    if msg["requestId"] == self.requestId:
-                        future.cancel()
+                    if msg.get("requestId") == requestId:
+                        event_loop.call_soon_threadsafe(future.cancel)
 
                 def on_success(msg):
                     logger.debug("future success: request response received")
-                    event_loop.call_soon_threadsafe(future.set_result, msg)
+                    if msg.get("requestId") == requestId:
+                        def resolve():
+                            if not future.done():
+                                future.set_result(msg)
+                        event_loop.call_soon_threadsafe(resolve)
 
                 failure_listener = MessageListener("nop", on_nop)
                 success_listener = MessageListener(payload["type"], on_success)
@@ -211,8 +225,12 @@ class ConnectionManager:
                 self.send_message(payload)
                 logger.debug("request message sent: waiting for response")
 
-            await asyncio.create_task(task())
-            res = await asyncio.wait_for(future, 3.0)
+            try:
+                await asyncio.create_task(task())
+                res = await asyncio.wait_for(future, 3.0)
+            finally:
+                if not future.done():
+                    future.cancel()
             logger.debug("request/response complete")
             return res
         return None

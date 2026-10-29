@@ -1,6 +1,5 @@
 from krita import Extension
 from krita import Krita, DockWidget, Notifier
-from threading import Timer, Thread
 import os as os
 import asyncio
 from KritaBlenderLink.uvs_viewer import UvOverlay, get_q_view
@@ -10,6 +9,7 @@ from .qt_compat import (
     QColorDialog,
     QByteArray,
     QTimer,
+    pyqtSignal,
     Qt,
     QColor,
     Checked,
@@ -17,7 +17,6 @@ from .qt_compat import (
     ShowAlphaChannel,
     HexArgb,
 )
-import time
 import traceback
 
 from .connection import (
@@ -49,17 +48,29 @@ class BlenderKritaLinkExtension(Extension):
 
 
 class BlenderKritaLink(DockWidget):
+    blender_connected = pyqtSignal()
+    blender_disconnected = pyqtSignal()
+    uv_response_received = pyqtSignal(object)
+    uv_overlay_received = pyqtSignal(object)
+    refresh_received = pyqtSignal(object)
     listen_to_canvas_change = True
     connection: ConnectionManager | None = None
     advancedRefresh = 0  # 0 1 2 0-off 1-on 2-full
 
     def __init__(self):
         super().__init__()
+        self.blender_connected.connect(self.on_blender_connected)
+        self.blender_disconnected.connect(self.on_blender_disconnected)
+        self.uv_response_received.connect(self.handle_uv_response)
+        self.uv_overlay_received.connect(self.handle_uv_overlay)
+        self.refresh_received.connect(self.refresh_handle)
         logger.info("Docker init!!!")
         logger.debug("Settings listenCanvas: %s", Settings.getSetting("listenCanvas"))
         self.connection = ConnectionManager()
         self.avc_connected = False
-        self.refresh_time = 0
+        self.refresh_in_flight = None
+        self.refresh_pending = False
+        self.next_refresh_id = -2
         self.last_doc = None
         ImageState.instance.onImageDataChange.connect(
             lambda x: [change_memory(self.connection), logger.info("image file changed")]
@@ -187,8 +198,9 @@ class BlenderKritaLink(DockWidget):
         self.uv_overlay_debouncer = Debouncer(
             self.get_uv_overlay, 0.2, self.attach_uv_viewer
         )
-        # creating debounce for clicking send data too many times in a second
-        self.send_pixels_debouncer = Debouncer(self.send_pixels, 0.2)
+        self.send_pixels_timer = QTimer(self)
+        self.send_pixels_timer.setSingleShot(True)
+        self.send_pixels_timer.timeout.connect(self.send_pixels)
 
         # self.centralWidget.UVColorButton.clicked.connect(openColorDialog)
         self.central_widget.UVColorButton.installEventFilter(self.filter)
@@ -196,7 +208,7 @@ class BlenderKritaLink(DockWidget):
         self.central_widget.ConnectButton.clicked.connect(self.connect_blender)
         self.central_widget.DisconnectButton.clicked.connect(self.connection.disconnect)
         self.central_widget.SendDataButton.clicked.connect(
-            self.send_pixels_debouncer.cal
+            self.schedule_send_pixels
         )
         self.central_widget.RefreshImagesButton.clicked.connect(self.get_image_data)
         self.central_widget.ExportUVButton.clicked.connect(self.uv_to_new_layer)
@@ -228,9 +240,9 @@ class BlenderKritaLink(DockWidget):
 
         self.central_widget.image_search.textChanged.connect(image_search_change)
         self.last_send_pixels_time = 0
-        MessageListener("SELECT_UVS", self.handle_uv_response)
-        MessageListener("GET_UV_OVERLAY", self.handle_uv_overlay)
-        MessageListener("REFRESH", self.refresh_handle)
+        MessageListener("SELECT_UVS", self.uv_response_received.emit)
+        MessageListener("GET_UV_OVERLAY", self.uv_overlay_received.emit)
+        MessageListener("REFRESH", self.refresh_received.emit)
 
         attach_watch = QTimer(self)
         attach_watch.setInterval(300)
@@ -267,9 +279,6 @@ class BlenderKritaLink(DockWidget):
         disable_timer.timeout.connect(watch_disable)
         disable_timer.start()
 
-    def refresh_handle(self, message):
-        self.refresh_time = 0
-
     def attach_shortcuts_listeners(self):
         logger.info("onviewcreated, attaching shortcuts listeners...")
 
@@ -283,7 +292,7 @@ class BlenderKritaLink(DockWidget):
 
         Krita.instance().action("UVsToggleOnOff").triggered.connect(uv_show_toggle)
         Krita.instance().action("sendImage").triggered.connect(
-            self.send_pixels_debouncer.cal
+            self.schedule_send_pixels
         )
         Krita.instance().action("refreshUVs").triggered.connect(
             self.uv_overlay_debouncer.cal
@@ -294,14 +303,8 @@ class BlenderKritaLink(DockWidget):
 
     def connect_blender(self):
         self.connection.connect(
-            self.on_blender_connected,
-            lambda: (
-                self.central_widget.ConnectionStatus.setText(
-                    "Status: blender disconnected",
-                ),
-                UvOverlay.set_polygons([]),
-                ImageList.instance.clear_signal.emit(),
-            ),
+            self.blender_connected.emit,
+            self.blender_disconnected.emit,
         )
         win = Krita.instance().activeWindow().qwindow()
         if not self.avc_connected:
@@ -311,7 +314,14 @@ class BlenderKritaLink(DockWidget):
 
     def on_blender_connected(self):
         self.central_widget.ConnectionStatus.setText("Status: blender connected")
-        Thread(target=self.get_image_data).start()
+        self.get_image_data()
+
+    def on_blender_disconnected(self):
+        self.refresh_in_flight = None
+        self.refresh_pending = False
+        self.central_widget.ConnectionStatus.setText("Status: blender disconnected")
+        UvOverlay.set_polygons([])
+        ImageList.instance.clear_signal.emit()
 
     def get_image_data(self):
         if self.connection is None or self.connection.connection is None:
@@ -328,7 +338,7 @@ class BlenderKritaLink(DockWidget):
         kv = [(key, value) for key, value in self.connection.linked_images.items()]
         for image_name, img in kv:
             if img["document"] not in Krita.instance().documents():
-                img["memoryObject"].unlink()
+                self.connection.release_memory(img)
                 del self.connection.linked_images[image_name]
         ImageList.instance.refresh_signal.emit(images["data"])
 
@@ -339,6 +349,9 @@ class BlenderKritaLink(DockWidget):
 
     def send_pixels(self):
         if self.connection is None:
+            return
+        if self.refresh_in_flight is not None:
+            self.refresh_pending = True
             return
         doc = Krita.instance().activeDocument()
         image_obj = None
@@ -367,34 +380,46 @@ class BlenderKritaLink(DockWidget):
             elif self.advancedRefresh == 2:
                 doc.refreshProjection()
 
-        def write_mem():
-            depth = Krita.instance().activeDocument().colorDepth()
-            for key, value in dupa_list:
-                if self.central_widget.send_delay.value() > 0.0:
-                    time.sleep(self.central_widget.send_delay.value())
-                if value["type"] == "layer":
-                    pixelBytes = value["layer"].projectionPixelData(
-                        0, 0, doc.width(), doc.height()
-                    )
-                else:
-                    pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
-                self.connection.write_memory(pixelBytes, value["memoryObject"])
-
-            if self.refresh_time < time.time() - 3:
-                self.refresh_time = time.time()
-                self.connection.send_message(
-                    {
-                        "type": "REFRESH",
-                        "depth": depth,
-                        "requestId": 2137,
-                        "data": {
-                            "size": [doc.width(), doc.height()],
-                            "names": dupa_names,
-                        },
-                    }
+        if not dupa_list or not self.connection.connection:
+            return
+        depth = doc.colorDepth()
+        for key, value in dupa_list:
+            if value["type"] == "layer":
+                pixelBytes = value["layer"].projectionPixelData(
+                    0, 0, doc.width(), doc.height()
                 )
+            else:
+                pixelBytes = doc.pixelData(0, 0, doc.width(), doc.height())
+            self.connection.write_memory(pixelBytes, value["memoryObject"])
 
-        Thread(target=write_mem).start()
+        request_id = self.next_refresh_id
+        self.next_refresh_id -= 1
+        self.refresh_in_flight = [request_id, len(dupa_names)]
+        self.connection.send_message(
+            {
+                "type": "REFRESH",
+                "depth": depth,
+                "requestId": request_id,
+                "data": {
+                    "size": [doc.width(), doc.height()],
+                    "names": dupa_names,
+                },
+            }
+        )
+
+    def schedule_send_pixels(self, *_args, extra_delay=0):
+        delay = 0.01 + extra_delay + self.central_widget.send_delay.value()
+        self.send_pixels_timer.start(round(delay * 1000))
+
+    def refresh_handle(self, message):
+        if self.refresh_in_flight is None or message.get("requestId") != self.refresh_in_flight[0]:
+            return
+        self.refresh_in_flight[1] -= 1
+        if self.refresh_in_flight[1] == 0:
+            self.refresh_in_flight = None
+            if self.refresh_pending:
+                self.refresh_pending = False
+                self.send_pixels_timer.start(0)
 
     def on_listen_change(self, checked):
         logger.info("draw Listen changed: %s", checked)
@@ -404,11 +429,7 @@ class BlenderKritaLink(DockWidget):
         logger.debug("listenCanvas: %s", Settings.getSetting("listenCanvas"))
         if not Settings.getSetting("listenCanvas"):
             return
-        if x["paint"]:
-            self.send_pixels_debouncer.cal()
-        else:
-            t = Timer(0.25, self.send_pixels_debouncer.cal)
-            t.start()
+        self.schedule_send_pixels(extra_delay=0 if x["paint"] else 0.25)
 
     def canvasChanged(self, canvas):
         logger.debug("something Happened on canvas")

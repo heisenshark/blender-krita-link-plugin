@@ -5,6 +5,7 @@
 !/blenderKritaLink
 !/KritaBlenderLink
 !cppPart
+!/tests
 !ruff.toml
 !demo.gif
 !demo.mp4
